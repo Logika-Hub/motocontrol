@@ -12,6 +12,7 @@
     "seed:demo": "node database/seeds/seed.js --demo",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
+    "setup": "node scripts/setup.js",
     "test": "node --test --test-concurrency=1 tests/*.test.js"
   },
   "engines": {

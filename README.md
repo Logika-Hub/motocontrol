@@ -60,29 +60,40 @@ Node.js 20+ · Express 4 · PostgreSQL 14+ · API REST · sessões em PostgreSQL
 
 ## Instalação no servidor da oficina
 
-Pré-requisitos: [Node.js 20 LTS ou superior](https://nodejs.org/) e [PostgreSQL](https://www.postgresql.org/download/) no computador que será o servidor.
+A instalação é automática. Copie a pasta do projeto para o computador que será o servidor e:
 
-1. Crie o banco (no `psql` ou pgAdmin):
-   ```sql
-   CREATE ROLE motocontrol LOGIN PASSWORD 'uma-senha-forte';
-   CREATE DATABASE motocontrol OWNER motocontrol;
-   ```
-2. Copie o projeto para o servidor e instale as dependências:
-   ```bash
-   npm ci --omit=dev
-   ```
+**Windows 10/11** — clique com o botão direito em **`instalar.bat`** → *Executar como administrador*.
+
+**Linux (Debian/Ubuntu)**:
+```bash
+sudo ./instalar.sh
+```
+
+O instalador:
+
+1. instala o Node.js LTS e o PostgreSQL se não estiverem presentes (Windows via `winget`; Linux via `apt`/NodeSource);
+2. instala as dependências do projeto;
+3. cria o usuário e o banco `motocontrol` no PostgreSQL, com senha aleatória;
+4. gera o `.env` (segredo de sessão aleatório, caminhos do `pg_dump`/`pg_restore`);
+5. cria as tabelas e pede a senha do usuário `admin`;
+6. configura a inicialização automática (Agendador de Tarefas no Windows, `systemd` no Linux), libera a porta no firewall só para a rede local e, se você confirmar, desativa a suspensão do computador;
+7. testa se o sistema responde e mostra o endereço para os outros computadores (ex.: `http://192.168.0.100:3000`).
+
+Pode ser executado de novo com segurança: um `.env` existente, o banco, os dados e o administrador são preservados — serve para atualizar o sistema ou reconfigurar a inicialização. Reserve um IP fixo para o servidor no roteador.
+
+No Windows, quando o instalador precisa instalar o PostgreSQL, ele gera a senha do superusuário `postgres` e a salva em `postgres-superusuario.txt`: guarde-a em local seguro e apague o arquivo. Se o PostgreSQL já estiver instalado, o instalador pede essa senha.
+
+Opções (detalhes no cabeçalho de `scripts/setup.js`): `--yes` (sem perguntas; a senha do admin é gerada e exibida, com troca obrigatória no primeiro acesso), `--port=3000`, `--no-service`.
+
+<details>
+<summary>Instalação manual</summary>
+
+1. Crie o banco: `CREATE ROLE motocontrol LOGIN PASSWORD '...'; CREATE DATABASE motocontrol OWNER motocontrol;`
+2. `npm ci --omit=dev`
 3. Copie `.env.example` para `.env` e preencha `DATABASE_URL`, `SESSION_SECRET` e `ADMIN_PASSWORD`.
-4. Crie as tabelas e o usuário administrador:
-   ```bash
-   npm run seed
-   ```
-5. Inicie:
-   ```bash
-   npm start
-   ```
-6. Nos outros computadores, acesse `http://IP-DO-SERVIDOR:3000` (ex.: `http://192.168.0.100:3000`). Reserve um IP fixo para o servidor no roteador.
-
-Para iniciar automaticamente com o sistema operacional: [`deploy/motocontrol.service`](deploy/motocontrol.service) (Linux/systemd) ou [`deploy/windows-servico.md`](deploy/windows-servico.md) (Windows).
+4. `npm run seed` e `npm start`.
+5. Inicialização automática: [`deploy/motocontrol.service`](deploy/motocontrol.service) (Linux) ou [`deploy/windows-servico.md`](deploy/windows-servico.md) (Windows).
+</details>
 
 As migrations são aplicadas automaticamente a cada inicialização (`database/migrations/`).
 
@@ -131,7 +142,8 @@ client/
   pages/                  uma tela por arquivo
   scripts/                API, utilitários de interface, formulários
   styles/
-scripts/                  backup e restauração via linha de comando
+scripts/                  instalador (setup.js), backup e restauração
+instalar.bat, instalar.sh instaladores para Windows e Linux
 deploy/                   inicialização automática (Linux e Windows)
 tests/                    testes de integração
 ```

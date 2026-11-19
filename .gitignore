@@ -4,3 +4,7 @@ node_modules/
 backups/*
 !backups/.gitkeep
 .DS_Store
+
+# Gerados pelo instalador
+iniciar-motocontrol.bat
+postgres-superusuario.txt
