@@ -108,7 +108,15 @@ export async function render(el, [id], ctx) {
           </tr>`))}</tbody></table>`) : raw('<p class="empty">Nenhum serviço ou peça registrado.</p>')}
       </section>
 
-      <section class="card">
+      <div class="print-only signatures">
+        <p>Data de entrega: ____/____/________</p>
+        <div class="signature-lines">
+          <div><span></span>Cliente — ${wo.customer_name}</div>
+          <div><span></span>Responsável pela oficina</div>
+        </div>
+      </div>
+
+      <section class="card history-card">
         <h2>Histórico de atividades</h2>
         ${open && updateTypes.length ? raw(html`
           <form class="timeline-form" data-update-form>
@@ -117,12 +125,7 @@ export async function render(el, [id], ctx) {
             <button class="btn btn-primary" type="submit">Registrar</button>
           </form>`) : ''}
         <ol class="timeline">${[...wo.updates].reverse().map((u) => raw(timelineItem(u, open)))}</ol>
-      </section>
-
-      <div class="print-only signatures">
-        <div><span></span>Cliente — ${wo.customer_name}</div>
-        <div><span></span>Responsável pela oficina</div>
-      </div>`;
+      </section>`;
     bind();
   }
 
