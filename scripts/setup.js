@@ -5,12 +5,14 @@
  * Executa, de forma idempotente (pode rodar de novo sem estragar nada):
  *   1. verifica Node.js e PostgreSQL
  *   2. instala as dependências (npm ci)
- *   3. cria o usuário e o banco "motocontrol" no PostgreSQL com senha aleatória
- *   4. gera o arquivo .env (SESSION_SECRET aleatório, caminhos do pg_dump)
- *   5. cria as tabelas e o usuário "admin"
- *   6. registra a inicialização automática (systemd no Linux, Agendador de Tarefas no Windows)
- *      e libera a porta no firewall do Windows
- *   7. inicia o sistema, testa e mostra o endereço de acesso na rede
+ *   3. faz TODAS as perguntas de uma vez (senha do banco, senha do admin, suspensão);
+ *      daqui em diante a instalação segue sem interação
+ *   4. instala o PostgreSQL (Windows, se faltar) e cria o usuário e o banco "motocontrol"
+ *   5. gera o arquivo .env (SESSION_SECRET aleatório, caminhos do pg_dump)
+ *   6. cria as tabelas e o usuário "admin"
+ *   7. registra a inicialização automática (systemd no Linux, Agendador de Tarefas no Windows),
+ *      libera a porta no firewall e cria os atalhos
+ *   8. inicia o sistema, testa e mostra o endereço de acesso na rede
  *
  * Uso normal: execute instalar.bat (Windows) ou sudo ./instalar.sh (Linux).
  * Direto:      node scripts/setup.js [opções]
@@ -51,7 +53,8 @@ const DB_USER = DB_NAME;
 
 // ---------------------------------------------------------------- saída
 const color = (c, s) => (process.stdout.isTTY ? `\x1b[${c}m${s}\x1b[0m` : s);
-const step = (n, s) => console.log(`\n${color('1;36', `[${n}/7]`)} ${color('1', s)}`);
+const STEPS = 8;
+const step = (n, s) => console.log(`\n${color('1;36', `[${n}/${STEPS}]`)} ${color('1', s)}`);
 const ok = (s) => console.log(`  ${color('32', '✔')} ${s}`);
 const info = (s) => console.log(`  ${s}`);
 const warn = (s) => console.log(`  ${color('33', '!')} ${s}`);
@@ -83,15 +86,17 @@ function askHidden(question) {
   return new Promise((resolve) => {
     const write = r._writeToOutput;
     r._writeToOutput = (s) => { if (s.includes(question)) write.call(r, s); else if (!/^[\r\n]+$/.test(s)) write.call(r, '*'); else write.call(r, s); };
-    r.question(`  ${question}: `, (a) => { r._writeToOutput = write; process.stdout.write('\n'); resolve(a); });
+    r.question(`  ${question}: `, (a) => { r._writeToOutput = write; resolve(a); });
   });
 }
-async function askNewPassword(label) {
+async function askNewPassword(label, { min = 6, validate = () => null } = {}) {
   for (;;) {
-    const p1 = await askHidden(`${label} (mínimo 6 caracteres)`);
-    if (p1.length < 6) { warn('Senha muito curta.'); continue; }
+    const p1 = await askHidden(`${label} (mínimo ${min} caracteres)`);
+    if (p1.length < min) { warn('Senha muito curta.'); continue; }
+    const problem = validate(p1);
+    if (problem) { warn(problem); continue; }
     const p2 = await askHidden('Repita a senha');
-    if (p1 !== p2) { warn('As senhas não conferem.'); continue; }
+    if (p1 !== p2) { warn('As senhas não conferem. Digite de novo.'); continue; }
     return p1;
   }
 }
@@ -160,41 +165,16 @@ function validPgPassword(p) {
   return null;
 }
 
-/**
- * Instala o PostgreSQL no Windows (instalador da pasta "instaladores" ou winget), com a senha do
- * superusuário "postgres" definida pelo usuário. Retorna { password, generated }.
- */
-async function installPostgresWindows() {
-  const local = fs.existsSync(path.join(ROOT, 'instaladores'))
-    && fs.readdirSync(path.join(ROOT, 'instaladores')).filter((f) => /^postgresql-.*-windows-x64\.exe$/i.test(f)).sort().pop();
-  if (!local && !which('winget')) {
-    fail('PostgreSQL não encontrado e não há instalador na pasta "instaladores" nem o winget para baixá-lo.',
-      'Use o pacote completo gerado por "npm run pacote" ou instale o PostgreSQL: https://www.postgresql.org/download/windows/');
-  }
-  if (!isAdmin()) fail('É preciso executar o instalador como administrador para instalar o PostgreSQL.');
+/** Instalador local do PostgreSQL (pasta "instaladores" do pacote), se houver. */
+function localPgInstaller() {
+  const dir = path.join(ROOT, 'instaladores');
+  if (!fs.existsSync(dir)) return null;
+  return fs.readdirSync(dir).filter((f) => /^postgresql-.*-windows-x64\.exe$/i.test(f)).sort().pop() || null;
+}
 
-  let password = process.env.PG_SUPERUSER_PASSWORD || '';
-  let generated = false;
-  if (!password && !AUTO) {
-    console.log('');
-    info(color('1', 'O PostgreSQL (banco de dados) será instalado.'));
-    info('Defina a senha do administrador do banco (usuário "postgres").');
-    info('Ela NÃO é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção.');
-    info(color('33', 'Anote-a em local seguro: ela não fica salva no computador.'));
-    for (;;) {
-      password = await askNewPassword('Senha do banco de dados');
-      const problem = validPgPassword(password);
-      if (!problem) break;
-      warn(problem);
-    }
-  }
-  if (!password) {
-    password = randomHex(12);
-    generated = true;
-  } else if (validPgPassword(password)) {
-    fail(`PG_SUPERUSER_PASSWORD inválida: ${validPgPassword(password)}`);
-  }
-
+/** Instala o PostgreSQL no Windows com a senha do superusuário já definida na etapa de perguntas. */
+function installPostgresWindows(password, generated) {
+  const local = localPgInstaller();
   const pgArgs = ['--mode', 'unattended', '--unattendedmodeui', 'none', '--superpassword', password,
     '--serverport', '5432', '--disable-components', 'stackbuilder'];
   let r;
@@ -207,7 +187,6 @@ async function installPostgresWindows() {
       '--accept-package-agreements', '--accept-source-agreements', '--override', pgArgs.join(' ')], { stdio: 'inherit' });
   }
   if (r.status !== 0) fail(`A instalação do PostgreSQL falhou (código ${r.status}).`);
-
   if (generated) {
     fs.writeFileSync(PG_PASSWORD_FILE, [
       'Senha do usuário "postgres" do PostgreSQL, gerada na instalação automática do MotoControl:',
@@ -215,30 +194,34 @@ async function installPostgresWindows() {
       'Guarde em local seguro e apague este arquivo.', '',
     ].join(os.EOL), { mode: 0o600 });
   }
-  ok('PostgreSQL instalado');
-  return { password, generated };
+  const pgBin = findPgBin();
+  if (!pgBin) fail('O PostgreSQL foi instalado, mas o pg_dump não foi encontrado em Program Files\\PostgreSQL.');
+  ok(`PostgreSQL instalado em ${pgBin}`);
+  return pgBin;
 }
 
-async function checkPrerequisites() {
+function checkPrerequisites() {
   step(1, 'Verificando pré-requisitos');
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 20) fail(`Node.js ${process.versions.node} é antigo demais (mínimo: 20).`, 'Instale a versão LTS em https://nodejs.org/');
   ok(`Node.js ${process.versions.node}`);
-  let pgBin = findPgBin();
-  let pgInstall = null;
-  if (!pgBin && IS_WIN) {
-    pgInstall = await installPostgresWindows();
-    process.env.PG_SUPERUSER_PASSWORD = pgInstall.password;
-    pgBin = findPgBin();
+  const pgBin = findPgBin();
+  if (pgBin) {
+    ok(`PostgreSQL encontrado em ${pgBin}`);
+  } else if (IS_WIN) {
+    // Confere agora (antes das perguntas) se será possível instalar o PostgreSQL.
+    const local = localPgInstaller();
+    if (!local && !which('winget')) {
+      fail('PostgreSQL não encontrado e não há instalador na pasta "instaladores" nem o winget para baixá-lo.',
+        'Use o pacote completo gerado por "npm run pacote" ou instale o PostgreSQL: https://www.postgresql.org/download/windows/');
+    }
+    if (!isAdmin()) fail('Execute o instalar.bat como administrador: é preciso instalar o PostgreSQL.');
+    info(`PostgreSQL não instalado — será instalado ${local ? `a partir de instaladores\\${local}` : 'pelo winget'}`);
+  } else {
+    fail('PostgreSQL não encontrado neste computador.', 'Execute sudo ./instalar.sh (instala automaticamente) ou: sudo apt install postgresql');
   }
-  if (!pgBin) {
-    fail('PostgreSQL não encontrado neste computador.',
-      IS_WIN ? 'Instale o PostgreSQL: https://www.postgresql.org/download/windows/'
-        : 'Execute sudo ./instalar.sh (instala automaticamente) ou: sudo apt install postgresql');
-  }
-  ok(`PostgreSQL encontrado em ${pgBin}`);
   if (!isAdmin()) warn('Sem privilégios de administrador: a inicialização automática e o firewall não serão configurados.');
-  return { pgBin, pgInstall };
+  return { pgBin, pgMissing: !pgBin };
 }
 
 /** Dependências já presentes (pacote offline gerado por "npm run pacote")? */
@@ -332,13 +315,86 @@ async function superuserConnection() {
   }
 }
 
-async function setupDatabase(existingEnv) {
-  step(3, 'Configurando o banco de dados');
+/** Já existe administrador no banco configurado no .env? (sem .env, não há como saber ainda) */
+async function adminAlreadyExists(existingEnv) {
+  if (!existingEnv || !existingEnv.DATABASE_URL) return false;
+  const { Client } = require(path.join(ROOT, 'node_modules', 'pg'));
+  const client = new Client({ connectionString: existingEnv.DATABASE_URL });
+  try {
+    await client.connect();
+    const { rows } = await client.query(
+      `SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id WHERE r.code = 'admin' LIMIT 1`);
+    return rows.length > 0;
+  } catch {
+    return false; // banco ou tabelas ainda não existem
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+/**
+ * Etapa de perguntas: tudo o que depende do usuário é perguntado (e conferido) aqui, de uma vez.
+ * Depois dela a instalação não interage mais.
+ */
+async function collectAnswers(existingEnv, pgMissing) {
+  step(3, 'Senhas e opções');
+  const answers = { pgPassword: null, pgGenerated: false, dbConn: null, adminPassword: null, disableSleep: false };
+  if (!AUTO) info(color('1', 'Responda agora: depois destas perguntas a instalação segue sozinha até o fim.'));
+
+  // 1) Senha do banco de dados (superusuário "postgres")
+  if (pgMissing) {
+    let pw = process.env.PG_SUPERUSER_PASSWORD || '';
+    if (pw && validPgPassword(pw)) fail(`PG_SUPERUSER_PASSWORD inválida: ${validPgPassword(pw)}`);
+    if (!pw && !AUTO) {
+      console.log('');
+      info(color('1', 'Senha do BANCO DE DADOS (PostgreSQL, usuário "postgres")'));
+      info('Não é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção.');
+      info(color('33', 'Anote-a em local seguro: ela não fica salva no computador.'));
+      pw = await askNewPassword('Defina a senha do banco de dados', { min: 8, validate: validPgPassword });
+    }
+    if (!pw) { pw = randomHex(12); answers.pgGenerated = true; }
+    answers.pgPassword = pw;
+  } else if (!(existingEnv && existingEnv.DATABASE_URL)) {
+    console.log('');
+    answers.dbConn = await superuserConnection(); // pede a senha e já confere se está certa
+  } else {
+    ok('Banco já configurado (.env existente) — nenhuma senha do banco é necessária');
+  }
+
+  // 2) Senha do admin do MotoControl
+  if (await adminAlreadyExists(existingEnv)) {
+    ok('Já existe um administrador do MotoControl — a senha dele não será alterada');
+  } else {
+    let pw = process.env.ADMIN_PASSWORD || '';
+    if (!pw && !AUTO) {
+      console.log('');
+      info(color('1', 'Senha do usuário "admin" do MotoControl (acesso completo ao sistema)'));
+      pw = await askNewPassword('Defina a senha do admin');
+    }
+    answers.adminPassword = pw || null;
+  }
+
+  // 3) Suspensão do computador
+  if (!flag('no-service') && isAdmin()) {
+    console.log('');
+    answers.disableSleep = await askYesNo('Impedir que este computador entre em suspensão (recomendado para o servidor)?', true);
+  }
+  if (!AUTO) { console.log(''); ok('Pronto! A instalação continua sem novas perguntas — pode levar alguns minutos.'); }
+  return answers;
+}
+
+async function setupDatabase(existingEnv, pgMissing, answers) {
+  step(4, 'Banco de dados');
+  let pgBin = null;
+  if (pgMissing) {
+    pgBin = installPostgresWindows(answers.pgPassword, answers.pgGenerated);
+    process.env.PG_SUPERUSER_PASSWORD = answers.pgPassword;
+  }
   if (existingEnv && existingEnv.DATABASE_URL) {
     ok('Arquivo .env já existe — mantendo o banco configurado nele');
-    return { databaseUrl: existingEnv.DATABASE_URL, created: false };
+    return { databaseUrl: existingEnv.DATABASE_URL, pgBin };
   }
-  const db = await superuserConnection();
+  const db = answers.dbConn || await superuserConnection();
   const dbPassword = randomHex(16);
   try {
     const roleExists = await db.query(`SELECT 1 FROM pg_roles WHERE rolname = '${DB_USER}'`);
@@ -363,11 +419,11 @@ async function setupDatabase(existingEnv) {
   }
   const host = process.env.PG_HOST || 'localhost';
   const port = process.env.PG_PORT || 5432;
-  return { databaseUrl: `postgres://${DB_USER}:${dbPassword}@${host}:${port}/${DB_NAME}`, created: true };
+  return { databaseUrl: `postgres://${DB_USER}:${dbPassword}@${host}:${port}/${DB_NAME}`, pgBin };
 }
 
 function writeEnv(existingEnv, databaseUrl, pgBin) {
-  step(4, 'Gerando configuração (.env)');
+  step(5, 'Gerando configuração (.env)');
   if (existingEnv && existingEnv.DATABASE_URL) {
     ok('Configuração existente mantida');
     return existingEnv;
@@ -394,8 +450,8 @@ function writeEnv(existingEnv, databaseUrl, pgBin) {
   return readEnvFile();
 }
 
-async function setupSchemaAndAdmin(env) {
-  step(5, 'Criando tabelas e o usuário administrador');
+async function setupSchemaAndAdmin(env, answers) {
+  step(6, 'Criando tabelas e o usuário administrador');
   Object.assign(process.env, env);
   const { pool } = require(path.join(ROOT, 'server', 'config', 'db'));
   const { migrate } = require(path.join(ROOT, 'database', 'migrate'));
@@ -407,12 +463,8 @@ async function setupSchemaAndAdmin(env) {
       ok('Já existe um administrador — nenhum usuário foi alterado');
       return null;
     }
-    let password = process.env.ADMIN_PASSWORD || '';
+    let password = answers.adminPassword || '';
     let generated = false;
-    if (!password && !AUTO) {
-      info('Defina a senha do usuário "admin" (acesso completo ao sistema):');
-      password = await askNewPassword('Senha do admin');
-    }
     if (!password) { password = randomHex(5); generated = true; }
     const bcrypt = require(path.join(ROOT, 'node_modules', 'bcryptjs'));
     await pool.query(
@@ -545,8 +597,8 @@ function createClientShortcut(port) {
   return file;
 }
 
-async function setupService() {
-  step(6, 'Configurando inicialização automática e atalhos');
+async function setupService(answers) {
+  step(7, 'Configurando inicialização automática e atalhos');
   if (IS_WIN && isAdmin() && !flag('no-shortcuts')) createWindowsShortcuts();
   if (flag('no-service')) { info('Inicialização automática ignorada (--no-service).'); return false; }
   if (!isAdmin()) {
@@ -554,7 +606,7 @@ async function setupService() {
     return false;
   }
   const started = IS_WIN ? setupServiceWindows() : setupServiceLinux();
-  if (started && await askYesNo('Impedir que este computador entre em suspensão (recomendado para o servidor)?', true)) {
+  if (started && answers.disableSleep) {
     if (IS_WIN) {
       run('powercfg', ['/change', 'standby-timeout-ac', '0']);
       run('powercfg', ['/change', 'hibernate-timeout-ac', '0']);
@@ -583,7 +635,7 @@ async function waitForHealth(port, timeoutMs = 30000) {
 }
 
 async function finish(serviceStarted, env, generatedAdminPassword, pgInstall) {
-  step(7, 'Verificando');
+  step(8, 'Verificando');
   const port = Number(env.PORT) || PORT;
   if (serviceStarted) {
     if (await waitForHealth(port)) ok('MotoControl respondendo');
@@ -623,13 +675,16 @@ async function finish(serviceStarted, env, generatedAdminPassword, pgInstall) {
 // ---------------------------------------------------------------- principal
 (async () => {
   console.log(color('1', '\n  MotoControl — instalação do servidor da oficina\n'));
-  const { pgBin, pgInstall } = await checkPrerequisites();
+  const { pgBin: foundPgBin, pgMissing } = checkPrerequisites();
   installDeps();
   const existingEnv = readEnvFile();
-  const { databaseUrl } = await setupDatabase(existingEnv);
-  const env = writeEnv(existingEnv, databaseUrl, pgBin);
-  const generated = await setupSchemaAndAdmin(env);
-  const started = await setupService();
+  const answers = await collectAnswers(existingEnv, pgMissing);
+  if (rl) { rl.close(); rl = null; } // nenhuma pergunta daqui em diante
+  const { databaseUrl, pgBin: installedPgBin } = await setupDatabase(existingEnv, pgMissing, answers);
+  const env = writeEnv(existingEnv, databaseUrl, installedPgBin || foundPgBin);
+  const generated = await setupSchemaAndAdmin(env, answers);
+  const started = await setupService(answers);
+  const pgInstall = pgMissing ? { password: answers.pgPassword, generated: answers.pgGenerated } : null;
   await finish(started, env, generated, pgInstall);
   if (rl) rl.close();
 })().catch((err) => {

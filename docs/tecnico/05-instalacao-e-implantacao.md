@@ -28,13 +28,14 @@ O passo a passo para quem instala na oficina está no manual: [Servidor, backup 
 
 | Etapa | O que faz | Idempotência |
 |---|---|---|
-| 1. Pré-requisitos | Node ≥ 20; localiza `pg_dump` (PATH ou `Program Files\PostgreSQL\*\bin`). **Windows sem PostgreSQL:** pede a senha do `postgres` (oculta, com confirmação) e instala pelo `.exe` de `instaladores/` ou pelo `winget`, passando os argumentos sem shell | Pula se já instalado |
+| 1. Pré-requisitos | Node ≥ 20; localiza `pg_dump` (PATH ou `Program Files\PostgreSQL\*\bin`). Windows sem PostgreSQL: confere já aqui se há instalador local ou `winget` e permissão de administrador | — |
 | 2. Dependências | `npm ci --omit=dev`, ou pula se já vierem no pacote | Pula se presentes |
-| 3. Banco | Conecta como superusuário (Linux root: `runuser -u postgres psql`; senão usuário/senha) e cria role + banco `motocontrol` com senha aleatória | Mantém tudo se o `.env` já existe |
-| 4. `.env` | `SESSION_SECRET` aleatório, `DATABASE_URL`, caminhos do `pg_dump`/`pg_restore`, permissão 600 | Não sobrescreve |
-| 5. Tabelas e admin | Migrations; cria `admin` se não houver administrador | Não altera admin existente |
-| 6. Inicialização | Windows: tarefa agendada **MotoControl** (boot, conta SYSTEM, reinício em falha), regra de firewall só para a sub-rede local, atalhos. Linux: unidade systemd `motocontrol`, `ufw` se ativo. Opcional: desativar suspensão | Recria/atualiza |
-| 7. Verificação | Aguarda `/api/health`, mostra os endereços na rede e gera `MotoControl (outros computadores).url` | Regera |
+| 3. Senhas e opções | **Única etapa interativa.** Senha do `postgres`: definida (Windows sem PostgreSQL) ou informada e **conferida na hora** (conexão de verdade); senha do `admin` (se ainda não houver administrador); desativar suspensão. Entradas ocultas, com confirmação | Pula o que já está configurado |
+| 4. Banco | Windows sem PostgreSQL: instala pelo `.exe` de `instaladores/` ou `winget`, com argumentos sem shell. Cria role + banco `motocontrol` com senha aleatória (Linux root: `runuser -u postgres psql`) | Mantém tudo se o `.env` já existe |
+| 5. `.env` | `SESSION_SECRET` aleatório, `DATABASE_URL`, caminhos do `pg_dump`/`pg_restore`, permissão 600 | Não sobrescreve |
+| 6. Tabelas e admin | Migrations; cria `admin` com a senha da etapa 3 se não houver administrador | Não altera admin existente |
+| 7. Inicialização | Windows: tarefa agendada **MotoControl** (boot, conta SYSTEM, reinício em falha), regra de firewall só para a sub-rede local, atalhos. Linux: unidade systemd `motocontrol`, `ufw` se ativo. Suspensão conforme a resposta da etapa 3 | Recria/atualiza |
+| 8. Verificação | Aguarda `/api/health`, mostra os endereços na rede e gera `MotoControl (outros computadores).url` | Regera |
 
 Opções: `--yes` (sem perguntas), `--port=N`, `--db-name=nome`, `--no-service`, `--no-shortcuts`, `--reinstall-deps`. Variáveis para `--yes`: `PG_SUPERUSER`, `PG_SUPERUSER_PASSWORD`, `PG_HOST`, `PG_PORT`, `ADMIN_PASSWORD`.
 

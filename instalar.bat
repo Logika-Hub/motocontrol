@@ -61,6 +61,9 @@ if !NODE_MAJOR! LSS 20 (
 rem ---------------------------------------------------------------- PostgreSQL e MotoControl
 rem O PostgreSQL e instalado pelo scripts\setup.js (pasta "instaladores" ou winget), que pede
 rem a senha do banco ao usuario.
+echo.
+echo  A seguir, responda as perguntas (senhas e opcoes). Depois disso a instalacao
+echo  segue sozinha ate o fim.
 node scripts\setup.js %*
 if errorlevel 1 goto :fim_erro
 echo.

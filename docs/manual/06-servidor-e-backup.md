@@ -14,9 +14,13 @@ Feito uma única vez, por quem entende um pouco de computador:
 
 1. Copie a pasta do MotoControl para o disco do servidor — por exemplo, `C:\MotoControl`. **Não** rode do pendrive.
 2. Clique com o botão direito em **`instalar.bat`** → **Executar como administrador**.
-3. Se o PostgreSQL (banco de dados) ainda não estiver instalado, o instalador pede para você **definir a senha do banco**. Ela não é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção — **anote-a em local seguro**, pois ela não fica salva no computador. (Mínimo de 8 caracteres, sem espaços nem os símbolos `" ' ^ % ! & | < >`.)
-   Se o PostgreSQL já estiver instalado, o instalador pede a senha que foi definida quando ele foi instalado.
-4. Defina a senha do usuário **admin** do MotoControl quando for pedido.
+3. Logo no começo, o instalador faz **todas as perguntas de uma vez** — depois ele segue sozinho até o fim:
+   - **Senha do banco de dados (PostgreSQL).** Se o banco ainda não estiver instalado, você **define** a senha (mínimo de 8 caracteres, sem espaços nem os símbolos `" ' ^ % ! & | < >`). Se já estiver instalado, você **informa** a senha definida quando ele foi instalado — o instalador confere na hora e pede de novo se estiver errada. Essa senha não é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção: **anote-a em local seguro**, pois ela não fica salva no computador.
+   - **Senha do admin do MotoControl** — o usuário com acesso completo ao sistema.
+   - Se deve **impedir que o computador entre em suspensão** (recomendado: responda Enter).
+
+   Em reinstalações, o que já está configurado não é perguntado de novo.
+4. Aguarde: a instalação do banco de dados pode levar alguns minutos.
 5. No final, anote o **endereço para os outros computadores** que aparece na tela (ex.: `http://192.168.0.100:3000`).
 6. Copie o arquivo **`MotoControl (outros computadores).url`**, criado na pasta do sistema, para a área de trabalho de cada computador da oficina.
 
