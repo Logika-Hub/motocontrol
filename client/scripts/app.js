@@ -57,6 +57,7 @@ function layout() {
       </nav>
       <div class="user-menu">
         <span class="user-name">${u.name}<small>${u.roleName}</small></span>
+        <a class="btn btn-ghost btn-sm" href="/ajuda/" target="_blank" rel="noopener">Ajuda</a>
         <a class="btn btn-ghost btn-sm" href="#/senha">Senha</a>
         <button class="btn btn-ghost btn-sm" data-logout>Sair</button>
       </div>

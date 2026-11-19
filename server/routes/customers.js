@@ -2,8 +2,8 @@ const express = require('express');
 const { query } = require('../config/db');
 const { requirePermission } = require('../middlewares/auth');
 const { audit } = require('../services/audit');
-const { notFound, conflict, badRequest } = require('../errors');
-const { str, optStr, digits, required, normalizeCpf, idParam, pagination } = require('../validation');
+const { notFound, conflict, badRequest } = require('../lib/errors');
+const { str, optStr, digits, required, normalizeCpf, idParam, pagination } = require('../lib/validation');
 
 const router = express.Router();
 

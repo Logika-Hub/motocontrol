@@ -56,6 +56,8 @@ function createApp() {
   api.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
 
   app.use('/api', api);
+  app.use('/ajuda', require('./server/routes/help'));
+  app.use('/ajuda', (_req, res) => res.status(404).send('Página de ajuda não encontrada. <a href="/ajuda/">Voltar ao índice</a>'));
   app.use(express.static(path.join(__dirname, 'client'), { index: 'index.html' }));
   app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'client', 'index.html')));
   app.use(errorHandler);

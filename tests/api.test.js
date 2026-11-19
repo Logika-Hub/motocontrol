@@ -184,3 +184,17 @@ test('backup pode ser gerado e restaurado', async () => {
   assert.equal(rows[0].name, 'João da Silva');
   assert.equal((await joao.post('/api/admin/backups')).status, 403);
 });
+
+test('manual do usuário é servido em /ajuda sem login', async () => {
+  assert.equal((await request(app).get('/ajuda')).status, 301);
+  const idx = await request(app).get('/ajuda/');
+  assert.equal(idx.status, 200);
+  assert.match(idx.text, /Manual do MotoControl/);
+  const page = await request(app).get('/ajuda/02-comandas');
+  assert.equal(page.status, 200);
+  assert.match(page.text, /id="abrir-uma-comanda"/);
+  assert.match(page.text, /href="03-clientes-e-motos"/);
+  assert.equal((await request(app).get('/ajuda/imagens/comanda.png')).status, 200);
+  assert.equal((await request(app).get('/ajuda/99-inexistente')).status, 404);
+  assert.equal((await request(app).get('/ajuda/..%2f..%2fpackage')).status, 404);
+});

@@ -1,7 +1,7 @@
 const { query, withTransaction } = require('../config/db');
 const { audit } = require('./audit');
 const { can } = require('../config/permissions');
-const { badRequest, notFound, conflict, forbidden } = require('../errors');
+const { badRequest, notFound, conflict, forbidden } = require('../lib/errors');
 
 const STATUS = {
   aberta: 'Aberta',

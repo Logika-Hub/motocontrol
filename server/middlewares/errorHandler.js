@@ -1,4 +1,4 @@
-const { AppError } = require('../errors');
+const { AppError } = require('../lib/errors');
 
 const PG_MESSAGES = {
   '23505': 'Já existe um registro com estes dados.',

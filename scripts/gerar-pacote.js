@@ -121,11 +121,14 @@ async function postgresInstaller() {
   }
 }
 
+// A oficina recebe o sistema e o manual; contexto, documentação técnica e testes ficam só no repositório.
+const EXCLUDE = [/^tests\//, /^\.git/, /^docs\/contexto\//, /^docs\/tecnico\//, /^docs\/README\.md$/, /^CLAUDE\.md$/, /^README\.md$/];
+
 function copyProject(dest) {
   const r = spawnSync('git', ['ls-files', '-z', '-co', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' });
   if (r.status !== 0) throw new Error('Este script precisa ser executado dentro do repositório Git do MotoControl.');
   const files = r.stdout.split('\0').filter(Boolean)
-    .filter((f) => !f.startsWith('tests/') && !f.startsWith('.git'));
+    .filter((f) => !EXCLUDE.some((re) => re.test(f)));
   for (const f of files) {
     const target = path.join(dest, f);
     fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -155,6 +158,11 @@ function readme(version, nodeName, pgName) {
     'Não é preciso internet: os instaladores abaixo estão na pasta "instaladores":',
     `  - ${nodeName || '(Node.js não incluído)'}`,
     `  - ${pgName || '(PostgreSQL não incluído — será baixado pelo winget, se houver internet)'}`,
+    '',
+    'MANUAL',
+    '',
+    '  Com o sistema aberto, clique em "Ajuda" (canto superior direito). O mesmo manual',
+    '  está na pasta docs\\manual.',
     '',
     'USO NO DIA A DIA',
     '',

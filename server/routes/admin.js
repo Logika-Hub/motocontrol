@@ -3,8 +3,8 @@ const { query } = require('../config/db');
 const { requirePermission } = require('../middlewares/auth');
 const backup = require('../services/backup');
 const { audit } = require('../services/audit');
-const { notFound } = require('../errors');
-const { pagination, optStr } = require('../validation');
+const { notFound } = require('../lib/errors');
+const { pagination, optStr } = require('../lib/validation');
 
 const router = express.Router();
 

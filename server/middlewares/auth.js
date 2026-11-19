@@ -1,6 +1,6 @@
 const { query } = require('../config/db');
 const { can } = require('../config/permissions');
-const { AppError, forbidden } = require('../errors');
+const { AppError, forbidden } = require('../lib/errors');
 
 /**
  * Carrega o usuário da sessão a cada requisição, para que desativação de conta

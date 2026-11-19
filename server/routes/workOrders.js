@@ -1,8 +1,8 @@
 const express = require('express');
 const { requirePermission } = require('../middlewares/auth');
 const svc = require('../services/workOrders');
-const { badRequest } = require('../errors');
-const { str, optStr, optInt, optDate, idParam, pagination } = require('../validation');
+const { badRequest } = require('../lib/errors');
+const { str, optStr, optInt, optDate, idParam, pagination } = require('../lib/validation');
 
 const router = express.Router();
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);

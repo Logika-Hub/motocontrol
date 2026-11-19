@@ -165,6 +165,7 @@ h1 .badge { font-size: .8rem; }
 .login-brand { display: flex; align-items: center; gap: .6rem; }
 .login-brand img { width: 40px; height: 40px; }
 .login .muted { margin: .3rem 0 1.4rem; }
+.login-help { font-size: .82rem; color: var(--muted); text-align: center; margin: 1rem 0 0; }
 
 /* Modal e toasts */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(16,24,40,.5); display: grid; place-items: center; z-index: 50; padding: 1rem; }

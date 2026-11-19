@@ -11,6 +11,7 @@ export function renderLogin(root, onLogin) {
         <label class="field"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>
         <p class="form-error" hidden></p>
         <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        <p class="login-help"><a href="/ajuda/" target="_blank" rel="noopener">Ajuda e manual de uso</a> · Esqueceu a senha? Peça ao administrador.</p>
       </form>
     </div>`;
   const form = root.querySelector('form');

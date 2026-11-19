@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
 const { requirePermission } = require('../middlewares/auth');
 const { audit } = require('../services/audit');
-const { badRequest, notFound } = require('../errors');
-const { str, required, idParam } = require('../validation');
+const { badRequest, notFound } = require('../lib/errors');
+const { str, required, idParam } = require('../lib/validation');
 
 const router = express.Router();
 router.use(requirePermission('users:manage'));
