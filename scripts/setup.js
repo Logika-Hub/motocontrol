@@ -18,6 +18,8 @@
  * Opções:
  *   --yes            não faz perguntas (usa variáveis de ambiente ou valores gerados)
  *   --no-service     não registra a inicialização automática
+ *   --no-shortcuts   não cria atalhos na área de trabalho/menu Iniciar (Windows)
+ *   --reinstall-deps reinstala as dependências mesmo que já estejam na pasta
  *   --port=3000      porta HTTP
  *   --db-name=nome   nome do banco (padrão: motocontrol)
  *
@@ -157,8 +159,18 @@ function checkNode() {
   return pgBin;
 }
 
+/** Dependências já presentes (pacote offline gerado por "npm run pacote")? */
+function depsPresent() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  return Object.keys(pkg.dependencies || {}).every((d) => fs.existsSync(path.join(ROOT, 'node_modules', d, 'package.json')));
+}
+
 function installDeps() {
   step(2, 'Instalando dependências');
+  if (depsPresent() && !flag('reinstall-deps')) {
+    ok('Dependências já incluídas no pacote (instalação sem internet)');
+    return;
+  }
   const npm = IS_WIN ? 'npm.cmd' : 'npm';
   const hasLock = fs.existsSync(path.join(ROOT, 'package-lock.json'));
   const r = run(npm, [hasLock ? 'ci' : 'install', '--omit=dev', '--no-audit', '--no-fund'], { cwd: ROOT, stdio: 'inherit' });
@@ -393,9 +405,42 @@ function setupServiceWindows() {
   return true;
 }
 
+/** Atalhos no Windows: área de trabalho e menu Iniciar (para todos os usuários). */
+function createWindowsShortcuts() {
+  const ps = (s) => s.replace(/'/g, "''");
+  const icon = path.join(ROOT, 'client', 'favicon.ico');
+  const shortcuts = [
+    ['[Environment]::GetFolderPath("CommonDesktopDirectory")', 'MotoControl', 'iniciar.bat', 'Abrir o MotoControl'],
+    ['Join-Path ([Environment]::GetFolderPath("CommonPrograms")) "MotoControl"', 'MotoControl', 'iniciar.bat', 'Abrir o MotoControl'],
+    ['Join-Path ([Environment]::GetFolderPath("CommonPrograms")) "MotoControl"', 'Parar MotoControl', 'parar.bat', 'Parar o servidor do MotoControl'],
+  ];
+  const script = ['$ws = New-Object -ComObject WScript.Shell'];
+  for (const [dirExpr, name, target, desc] of shortcuts) {
+    script.push(
+      `$d = ${dirExpr}; New-Item -ItemType Directory -Force -Path $d | Out-Null`,
+      `$s = $ws.CreateShortcut((Join-Path $d '${ps(name)}.lnk'))`,
+      `$s.TargetPath = '${ps(path.join(ROOT, target))}'; $s.WorkingDirectory = '${ps(ROOT)}'`,
+      `$s.IconLocation = '${ps(icon)},0'; $s.Description = '${ps(desc)}'; $s.WindowStyle = 7; $s.Save()`,
+    );
+  }
+  const r = run('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script.join('; ')]);
+  if (r.status === 0) ok('Atalhos "MotoControl" criados na área de trabalho e no menu Iniciar');
+  else warn(`Não foi possível criar os atalhos: ${(r.stderr || '').trim().split('\n')[0]}`);
+}
+
+/** Arquivo .url com o endereço na rede, para copiar para a área de trabalho dos outros computadores. */
+function createClientShortcut(port) {
+  const ip = lanAddresses()[0];
+  if (!ip) return null;
+  const file = path.join(ROOT, 'MotoControl (outros computadores).url');
+  fs.writeFileSync(file, ['[InternetShortcut]', `URL=http://${ip}:${port}/`, ''].join('\r\n'));
+  return file;
+}
+
 async function setupService() {
-  step(6, 'Configurando inicialização automática');
-  if (flag('no-service')) { info('Ignorado (--no-service).'); return false; }
+  step(6, 'Configurando inicialização automática e atalhos');
+  if (IS_WIN && isAdmin() && !flag('no-shortcuts')) createWindowsShortcuts();
+  if (flag('no-service')) { info('Inicialização automática ignorada (--no-service).'); return false; }
   if (!isAdmin()) {
     warn(IS_WIN ? 'Execute instalar.bat como administrador para esta etapa.' : 'Execute com sudo para esta etapa.');
     return false;
@@ -436,8 +481,9 @@ async function finish(serviceStarted, env, generatedAdminPassword) {
     if (await waitForHealth(port)) ok('MotoControl respondendo');
     else warn(`O serviço não respondeu. Veja o log: ${IS_WIN ? path.join(ROOT, 'motocontrol.log') : 'journalctl -u motocontrol -n 50'}`);
   } else {
-    info(`Para iniciar manualmente: ${color('1', 'npm start')} (na pasta ${ROOT})`);
+    info(`Para iniciar: ${color('1', IS_WIN ? 'iniciar.bat' : './iniciar.sh')} (na pasta ${ROOT})`);
   }
+  const clientShortcut = createClientShortcut(port);
   const ips = lanAddresses();
   console.log(`\n${color('1;32', '══ Instalação concluída ══')}\n`);
   console.log('  Neste computador:   ' + color('1', `http://localhost:${port}`));
@@ -445,6 +491,11 @@ async function finish(serviceStarted, env, generatedAdminPassword) {
     console.log('  Nos outros:         ' + ips.map((ip) => color('1', `http://${ip}:${port}`)).join('  ou  '));
     console.log(color('2', '  (Reserve um IP fixo para este computador no roteador para o endereço não mudar.)'));
   }
+  if (clientShortcut) {
+    console.log(`\n  Atalho para os outros computadores: copie ${color('1', `"${path.basename(clientShortcut)}"`)}`);
+    console.log('  (está na pasta do sistema) para a área de trabalho de cada um.');
+  }
+  console.log(`  Para abrir/parar o sistema neste computador: ${IS_WIN ? 'atalho "MotoControl" na área de trabalho / parar.bat' : './iniciar.sh / sudo ./parar.sh'}`);
   console.log(`\n  Usuário: ${color('1', 'admin')}`);
   if (generatedAdminPassword) {
     console.log(`  Senha provisória: ${color('1;33', generatedAdminPassword)}  (será pedida a troca no primeiro acesso)`);

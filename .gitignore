@@ -8,3 +8,9 @@ backups/*
 # Gerados pelo instalador
 iniciar-motocontrol.bat
 postgres-superusuario.txt
+motocontrol.pid
+MotoControl (outros computadores).url
+
+# Pacote de instalação (npm run pacote)
+instaladores/
+dist/

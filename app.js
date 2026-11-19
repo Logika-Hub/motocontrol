@@ -62,14 +62,30 @@ function createApp() {
   return app;
 }
 
+// Arquivo com o PID do servidor, usado por scripts/control.js (iniciar/parar).
+const PID_FILE = path.join(__dirname, 'motocontrol.pid');
+function writePidFile() {
+  const fs = require('fs');
+  fs.writeFileSync(PID_FILE, String(process.pid));
+  const cleanup = () => { try { if (fs.readFileSync(PID_FILE, 'utf8') === String(process.pid)) fs.unlinkSync(PID_FILE); } catch { /* já removido */ } };
+  process.on('exit', cleanup);
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK']) process.on(sig, () => process.exit(0));
+}
+
 if (require.main === module) {
   const { migrate } = require('./database/migrate');
   const { scheduleBackups } = require('./server/services/backup');
   migrate()
     .then(() => {
-      createApp().listen(env.port, env.host, () => {
+      const server = createApp().listen(env.port, env.host, () => {
         console.log(`MotoControl em execução: http://${env.host === '0.0.0.0' ? 'localhost' : env.host}:${env.port}`);
         console.log('Na rede local, acesse pelo IP deste computador (ex.: http://192.168.0.100:%d).', env.port);
+        writePidFile();
+      });
+      server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') console.error(`A porta ${env.port} já está em uso — o MotoControl provavelmente já está em execução.`);
+        else console.error(err);
+        process.exit(1);
       });
       scheduleBackups();
     })

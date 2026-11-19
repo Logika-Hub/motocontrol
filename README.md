@@ -60,9 +60,21 @@ Node.js 20+ · Express 4 · PostgreSQL 14+ · API REST · sessões em PostgreSQL
 
 ## Instalação no servidor da oficina
 
-A instalação é automática. Copie a pasta do projeto para o computador que será o servidor e:
+### 1. Gerar o pacote de instalação (no seu computador, com internet)
 
-**Windows 10/11** — clique com o botão direito em **`instalar.bat`** → *Executar como administrador*.
+```bash
+npm run pacote
+```
+
+Cria `dist/MotoControl-<versão>/` (e o `.zip`) com o sistema, as dependências já instaladas e, em `instaladores/`, o Node.js LTS (SHA-256 conferido com nodejs.org) e o PostgreSQL para Windows. Com esse pacote, **a instalação na oficina não precisa de internet**.
+
+Os instaladores baixados ficam em `./instaladores/` (fora do Git) e são reaproveitados. Se o download do PostgreSQL falhar, baixe o instalador *Windows x86-64* em [enterprisedb.com](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads), salve-o em `./instaladores/` e rode `npm run pacote` de novo. A versão padrão está em `PG_DEFAULT_URL`, no início de `scripts/gerar-pacote.js`.
+
+### 2. Instalar na oficina
+
+Copie a pasta do pacote para o disco do computador que será o servidor (ex.: `C:\MotoControl` — não rode a partir do pendrive) e:
+
+**Windows 10/11** — clique com o botão direito em **`instalar.bat`** → *Executar como administrador*. Ele usa os instaladores da pasta `instaladores/`; se não estiverem lá, baixa pelo `winget`.
 
 **Linux (Debian/Ubuntu)**:
 ```bash
@@ -71,19 +83,28 @@ sudo ./instalar.sh
 
 O instalador:
 
-1. instala o Node.js LTS e o PostgreSQL se não estiverem presentes (Windows via `winget`; Linux via `apt`/NodeSource);
-2. instala as dependências do projeto;
+1. instala o Node.js LTS e o PostgreSQL se não estiverem presentes (Windows: pasta `instaladores/` ou `winget`; Linux: `apt`/NodeSource);
+2. instala as dependências do projeto (pula esta etapa se já vierem no pacote);
 3. cria o usuário e o banco `motocontrol` no PostgreSQL, com senha aleatória;
 4. gera o `.env` (segredo de sessão aleatório, caminhos do `pg_dump`/`pg_restore`);
 5. cria as tabelas e pede a senha do usuário `admin`;
-6. configura a inicialização automática (Agendador de Tarefas no Windows, `systemd` no Linux), libera a porta no firewall só para a rede local e, se você confirmar, desativa a suspensão do computador;
-7. testa se o sistema responde e mostra o endereço para os outros computadores (ex.: `http://192.168.0.100:3000`).
+6. configura a inicialização automática (Agendador de Tarefas no Windows, `systemd` no Linux), cria o atalho **MotoControl** na área de trabalho e no menu Iniciar (Windows), libera a porta no firewall só para a rede local e, se você confirmar, desativa a suspensão do computador;
+7. testa se o sistema responde, mostra o endereço para os outros computadores (ex.: `http://192.168.0.100:3000`) e cria o arquivo `MotoControl (outros computadores).url` — basta copiá-lo para a área de trabalho de cada computador da oficina.
+
+### 3. Uso no dia a dia
+
+| Arquivo | Windows | Linux | O que faz |
+|---|---|---|---|
+| Iniciar | `iniciar.bat` (ou o atalho **MotoControl**) | `./iniciar.sh` | Inicia o servidor, se estiver parado, e abre o sistema no navegador |
+| Parar | `parar.bat` (pede permissão de administrador) | `sudo ./parar.sh` | Para o servidor — os outros computadores perdem o acesso |
+
+O servidor também inicia sozinho quando o computador é ligado. Por baixo, os dois arquivos chamam `node scripts/control.js start|stop|restart|status`.
 
 Pode ser executado de novo com segurança: um `.env` existente, o banco, os dados e o administrador são preservados — serve para atualizar o sistema ou reconfigurar a inicialização. Reserve um IP fixo para o servidor no roteador.
 
 No Windows, quando o instalador precisa instalar o PostgreSQL, ele gera a senha do superusuário `postgres` e a salva em `postgres-superusuario.txt`: guarde-a em local seguro e apague o arquivo. Se o PostgreSQL já estiver instalado, o instalador pede essa senha.
 
-Opções (detalhes no cabeçalho de `scripts/setup.js`): `--yes` (sem perguntas; a senha do admin é gerada e exibida, com troca obrigatória no primeiro acesso), `--port=3000`, `--no-service`.
+Opções (detalhes no cabeçalho de `scripts/setup.js`): `--yes` (sem perguntas; a senha do admin é gerada e exibida, com troca obrigatória no primeiro acesso), `--port=3000`, `--no-service`, `--no-shortcuts`, `--reinstall-deps`.
 
 <details>
 <summary>Instalação manual</summary>
@@ -142,8 +163,8 @@ client/
   pages/                  uma tela por arquivo
   scripts/                API, utilitários de interface, formulários
   styles/
-scripts/                  instalador (setup.js), backup e restauração
-instalar.bat, instalar.sh instaladores para Windows e Linux
+scripts/                  instalador (setup.js), controle (control.js), pacote, backup e restauração
+instalar.*, iniciar.*, parar.*   instalar / iniciar / parar (Windows .bat, Linux .sh)
 deploy/                   inicialização automática (Linux e Windows)
 tests/                    testes de integração
 ```
