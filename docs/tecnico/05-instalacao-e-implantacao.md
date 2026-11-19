@@ -30,7 +30,7 @@ O passo a passo para quem instala na oficina está no manual: [Servidor, backup 
 |---|---|---|
 | 1. Pré-requisitos | Node ≥ 20; localiza `pg_dump` (PATH ou `Program Files\PostgreSQL\*\bin`). Windows sem PostgreSQL: confere já aqui se há instalador local ou `winget` e permissão de administrador | — |
 | 2. Dependências | `npm ci --omit=dev`, ou pula se já vierem no pacote | Pula se presentes |
-| 3. Senhas e opções | **Única etapa interativa.** Senha do `postgres`: definida (Windows sem PostgreSQL) ou informada e **conferida na hora** (conexão de verdade); senha do `admin` (se ainda não houver administrador); desativar suspensão. Entradas ocultas, com confirmação | Pula o que já está configurado |
+| 3. Senhas e opções | **Única etapa interativa.** Senha do `postgres`: definida (Windows sem PostgreSQL) ou informada e **conferida na hora** (conexão de verdade); senha do `admin` (se ainda não houver administrador); desativar suspensão. Entradas ocultas, com confirmação. **No Windows**, cada senha é lida pela caixa de senha do PowerShell (`Read-Host -AsSecureString`, mostra `*`), que devolve o valor por um arquivo temporário em `%TEMP%`, apagado logo após a leitura; se o PowerShell falhar, usa a leitura do terminal do Node | Pula o que já está configurado |
 | 4. Banco | Windows sem PostgreSQL: instala pelo `.exe` de `instaladores/` ou `winget`, com argumentos sem shell. Cria role + banco `motocontrol` com senha aleatória (Linux root: `runuser -u postgres psql`) | Mantém tudo se o `.env` já existe |
 | 5. `.env` | `SESSION_SECRET` aleatório, `DATABASE_URL`, caminhos do `pg_dump`/`pg_restore`, permissão 600 | Não sobrescreve |
 | 6. Tabelas e admin | Migrations; cria `admin` com a senha da etapa 3 se não houver administrador | Não altera admin existente |

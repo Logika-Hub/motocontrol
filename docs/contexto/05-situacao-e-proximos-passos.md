@@ -10,7 +10,7 @@ O escopo obrigatório do MVP (briefing, seção 10.1) está implementado e cober
 
 | Prioridade | Item | Por quê |
 |---|---|---|
-| 🔴 Alta | **Testar o pacote completo em um Windows 10/11 limpo, sem internet** (máquina virtual serve) | `instalar.bat`, instalação silenciosa do PostgreSQL, tarefa agendada, firewall, atalhos e `parar.bat` nunca foram executados em Windows real |
+| 🔴 Alta | **Testar o pacote completo em um Windows 10/11 limpo, sem internet** (máquina virtual serve) | `instalar.bat`, caixa de senha do PowerShell, instalação silenciosa do PostgreSQL, tarefa agendada, firewall, atalhos e `parar.bat` nunca foram executados em Windows real |
 | 🔴 Alta | Conferir o instalador do PostgreSQL no pacote (`PG_DEFAULT_URL` em `scripts/gerar-pacote.js`) e atualizar para a versão 17.x mais recente | O download não pôde ser testado no ambiente de desenvolvimento |
 | 🔴 Alta | Combinar com a oficina **quem copia os backups para mídia externa e com que frequência** | Backups ficam no mesmo disco do servidor |
 | 🟡 Média | Contrato de licença de uso (prazo, suporte, responsabilidade, LGPD) | O sistema guarda CPF, telefone e endereço de clientes |

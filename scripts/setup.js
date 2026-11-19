@@ -80,8 +80,49 @@ async function askYesNo(question, def = true) {
   const a = (await ask(`${question} (${def ? 'S/n' : 's/N'})`)).toLowerCase();
   return a ? a.startsWith('s') || a.startsWith('y') : def;
 }
+/**
+ * Windows: lê a senha com a caixa de senha nativa do PowerShell (Read-Host -AsSecureString, que
+ * mostra "*"). O PowerShell fica com o console inteiro (stdio herdado) para que o prompt e os "*"
+ * apareçam; a senha volta em Base64 por um arquivo temporário na pasta TEMP do usuário (acessível
+ * só a ele e aos administradores), apagado logo após a leitura.
+ * Retorna null se o PowerShell não estiver disponível ou falhar — aí usa-se a leitura do Node.
+ */
+const PS_HIDDEN_READ = [
+  "$ErrorActionPreference = 'Stop'",
+  '$s = Read-Host -AsSecureString',
+  '$b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)',
+  'try { $p = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b) }',
+  'finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }',
+  '[IO.File]::WriteAllText($env:MOTOCONTROL_SECRET_FILE, [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($p)))',
+].join('; ');
+
+function readHiddenWithPowerShell(question, psBin = 'powershell') {
+  if (rl) { rl.close(); rl = null; } // devolve o console ao PowerShell
+  const file = path.join(os.tmpdir(), `motocontrol-${process.pid}-${randomHex(8)}.tmp`);
+  process.stdout.write(`  ${question}: `);
+  try {
+    const r = spawnSync(psBin, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', PS_HIDDEN_READ], {
+      stdio: 'inherit', env: { ...process.env, MOTOCONTROL_SECRET_FILE: file },
+    });
+    if (r.error || r.status !== 0 || !fs.existsSync(file)) return null;
+    return Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'base64').toString('utf8');
+  } catch {
+    return null;
+  } finally {
+    try { fs.unlinkSync(file); } catch { /* não foi criado */ }
+  }
+}
+
+let psPromptBroken = false;
 function askHidden(question) {
   if (AUTO) return Promise.resolve('');
+  if (IS_WIN && !psPromptBroken) {
+    const answer = readHiddenWithPowerShell(question);
+    if (answer !== null) return Promise.resolve(answer);
+    psPromptBroken = true; // não tenta de novo; segue com a leitura do Node
+    process.stdout.write('\n');
+    warn('Não foi possível usar a caixa de senha do PowerShell; usando a leitura do terminal.');
+  }
   const r = prompt();
   return new Promise((resolve) => {
     const write = r._writeToOutput;
