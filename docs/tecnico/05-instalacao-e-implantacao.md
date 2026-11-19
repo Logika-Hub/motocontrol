@@ -5,15 +5,16 @@ O passo a passo para quem instala na oficina está no manual: [Servidor, backup 
 ## Fluxo
 
 ```
-  Seu computador (com internet)                  Servidor da oficina (sem internet)
- ┌──────────────────────────────┐   pendrive   ┌───────────────────────────────────────────────┐
- │ npm run pacote                │ ───────────► │ instalar.bat (como administrador)              │
- │  → dist/MotoControl-x.y.z/    │              │  1. Node.js: instaladores/*.msi  (ou winget)    │
- │     node_modules/             │              │  2. PostgreSQL: instaladores/*.exe (ou winget)  │
- │     instaladores/node*.msi    │              │  3. node scripts/setup.js                      │
- │     instaladores/postgresql*  │              │      banco, .env, tabelas, admin, tarefa        │
- │     LEIA-ME.txt               │              │      agendada, firewall, atalhos, verificação   │
- └──────────────────────────────┘              └───────────────────────────────────────────────┘
+  Seu computador (com internet)                Servidor da oficina (sem internet)
+ ┌─────────────────────────────┐   pendrive   ┌──────────────────────────────────────────────┐
+ │ npm run pacote               │ ───────────► │ instalar.bat (como administrador)            │
+ │  → dist/MotoControl-x.y.z/   │              │  1. Node.js: instaladores/*.msi (ou winget)  │
+ │     node_modules/            │              │  2. node scripts/setup.js:                   │
+ │     instaladores/node*.msi   │              │     - PostgreSQL: instaladores/*.exe (ou     │
+ │     instaladores/postgresql* │              │       winget), com senha definida na hora    │
+ │     LEIA-ME.txt              │              │     - banco, .env, tabelas, admin            │
+ │                              │              │     - tarefa agendada, firewall, atalhos     │
+ └─────────────────────────────┘              └──────────────────────────────────────────────┘
 ```
 
 ## Gerar o pacote — `scripts/gerar-pacote.js`
@@ -27,7 +28,7 @@ O passo a passo para quem instala na oficina está no manual: [Servidor, backup 
 
 | Etapa | O que faz | Idempotência |
 |---|---|---|
-| 1. Pré-requisitos | Node ≥ 20; localiza `pg_dump` (PATH ou `Program Files\PostgreSQL\*\bin`) | — |
+| 1. Pré-requisitos | Node ≥ 20; localiza `pg_dump` (PATH ou `Program Files\PostgreSQL\*\bin`). **Windows sem PostgreSQL:** pede a senha do `postgres` (oculta, com confirmação) e instala pelo `.exe` de `instaladores/` ou pelo `winget`, passando os argumentos sem shell | Pula se já instalado |
 | 2. Dependências | `npm ci --omit=dev`, ou pula se já vierem no pacote | Pula se presentes |
 | 3. Banco | Conecta como superusuário (Linux root: `runuser -u postgres psql`; senão usuário/senha) e cria role + banco `motocontrol` com senha aleatória | Mantém tudo se o `.env` já existe |
 | 4. `.env` | `SESSION_SECRET` aleatório, `DATABASE_URL`, caminhos do `pg_dump`/`pg_restore`, permissão 600 | Não sobrescreve |
@@ -37,6 +38,8 @@ O passo a passo para quem instala na oficina está no manual: [Servidor, backup 
 
 Opções: `--yes` (sem perguntas), `--port=N`, `--db-name=nome`, `--no-service`, `--no-shortcuts`, `--reinstall-deps`. Variáveis para `--yes`: `PG_SUPERUSER`, `PG_SUPERUSER_PASSWORD`, `PG_HOST`, `PG_PORT`, `ADMIN_PASSWORD`.
 
+**Senha do superusuário do PostgreSQL**, em ordem de prioridade: variável `PG_SUPERUSER_PASSWORD` → arquivo `postgres-superusuario.txt` (de instalações antigas ou do modo `--yes`) → pergunta ao usuário, explicando qual senha é. No Linux como root não é usada (autenticação local via `runuser -u postgres`).
+
 ### O que o instalador cria no Windows
 
 | Item | Onde |
@@ -45,7 +48,7 @@ Opções: `--yes` (sem perguntas), `--port=N`, `--db-name=nome`, `--no-service`,
 | Firewall | Regra de entrada **MotoControl**, TCP na porta configurada, `remoteip=localsubnet` |
 | Atalhos | Área de trabalho pública e menu Iniciar → MotoControl (Abrir / Parar) |
 | Log do servidor | `motocontrol.log` na pasta do sistema |
-| Senha do PostgreSQL | `postgres-superusuario.txt` (só se o instalador instalou o PostgreSQL) — guardar e apagar |
+| Senha do PostgreSQL | Definida pelo usuário durante a instalação e **não gravada**. Só no modo `--yes` (senha gerada) vai para `postgres-superusuario.txt` |
 
 ## Controle do serviço — `scripts/control.js`
 

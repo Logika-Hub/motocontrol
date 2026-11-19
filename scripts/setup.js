@@ -143,20 +143,102 @@ function findPgBin() {
 }
 
 // ---------------------------------------------------------------- etapas
-function checkNode() {
+const PG_PASSWORD_FILE = path.join(ROOT, 'postgres-superusuario.txt');
+
+/** Senha do "postgres" gravada por versões antigas do instalador (ou pelo modo --yes). */
+function passwordFromFile() {
+  try {
+    const lines = fs.readFileSync(PG_PASSWORD_FILE, 'utf8').split(/\r?\n/).map((l) => l.trim());
+    return lines.find((l) => /^[A-Za-z0-9]{12,}$/.test(l)) || '';
+  } catch { return ''; }
+}
+
+/** Senha que pode ir com segurança para a linha de comando do instalador do PostgreSQL. */
+function validPgPassword(p) {
+  if (p.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+  if (/[\s"'`^%!&|<>\\]/.test(p)) return 'Não use espaços nem os caracteres  " \' ` ^ % ! & | < > \\';
+  return null;
+}
+
+/**
+ * Instala o PostgreSQL no Windows (instalador da pasta "instaladores" ou winget), com a senha do
+ * superusuário "postgres" definida pelo usuário. Retorna { password, generated }.
+ */
+async function installPostgresWindows() {
+  const local = fs.existsSync(path.join(ROOT, 'instaladores'))
+    && fs.readdirSync(path.join(ROOT, 'instaladores')).filter((f) => /^postgresql-.*-windows-x64\.exe$/i.test(f)).sort().pop();
+  if (!local && !which('winget')) {
+    fail('PostgreSQL não encontrado e não há instalador na pasta "instaladores" nem o winget para baixá-lo.',
+      'Use o pacote completo gerado por "npm run pacote" ou instale o PostgreSQL: https://www.postgresql.org/download/windows/');
+  }
+  if (!isAdmin()) fail('É preciso executar o instalador como administrador para instalar o PostgreSQL.');
+
+  let password = process.env.PG_SUPERUSER_PASSWORD || '';
+  let generated = false;
+  if (!password && !AUTO) {
+    console.log('');
+    info(color('1', 'O PostgreSQL (banco de dados) será instalado.'));
+    info('Defina a senha do administrador do banco (usuário "postgres").');
+    info('Ela NÃO é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção.');
+    info(color('33', 'Anote-a em local seguro: ela não fica salva no computador.'));
+    for (;;) {
+      password = await askNewPassword('Senha do banco de dados');
+      const problem = validPgPassword(password);
+      if (!problem) break;
+      warn(problem);
+    }
+  }
+  if (!password) {
+    password = randomHex(12);
+    generated = true;
+  } else if (validPgPassword(password)) {
+    fail(`PG_SUPERUSER_PASSWORD inválida: ${validPgPassword(password)}`);
+  }
+
+  const pgArgs = ['--mode', 'unattended', '--unattendedmodeui', 'none', '--superpassword', password,
+    '--serverport', '5432', '--disable-components', 'stackbuilder'];
+  let r;
+  if (local) {
+    info(`Instalando o PostgreSQL a partir de instaladores\\${local} (pode levar alguns minutos)...`);
+    r = run(path.join(ROOT, 'instaladores', local), pgArgs, { stdio: 'inherit' });
+  } else {
+    info('Baixando e instalando o PostgreSQL 17 pelo winget (pode levar alguns minutos)...');
+    r = run('winget', ['install', '--id', 'PostgreSQL.PostgreSQL.17', '-e', '--silent',
+      '--accept-package-agreements', '--accept-source-agreements', '--override', pgArgs.join(' ')], { stdio: 'inherit' });
+  }
+  if (r.status !== 0) fail(`A instalação do PostgreSQL falhou (código ${r.status}).`);
+
+  if (generated) {
+    fs.writeFileSync(PG_PASSWORD_FILE, [
+      'Senha do usuário "postgres" do PostgreSQL, gerada na instalação automática do MotoControl:',
+      password,
+      'Guarde em local seguro e apague este arquivo.', '',
+    ].join(os.EOL), { mode: 0o600 });
+  }
+  ok('PostgreSQL instalado');
+  return { password, generated };
+}
+
+async function checkPrerequisites() {
   step(1, 'Verificando pré-requisitos');
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 20) fail(`Node.js ${process.versions.node} é antigo demais (mínimo: 20).`, 'Instale a versão LTS em https://nodejs.org/');
   ok(`Node.js ${process.versions.node}`);
-  const pgBin = findPgBin();
+  let pgBin = findPgBin();
+  let pgInstall = null;
+  if (!pgBin && IS_WIN) {
+    pgInstall = await installPostgresWindows();
+    process.env.PG_SUPERUSER_PASSWORD = pgInstall.password;
+    pgBin = findPgBin();
+  }
   if (!pgBin) {
     fail('PostgreSQL não encontrado neste computador.',
-      IS_WIN ? 'Execute instalar.bat (instala automaticamente) ou baixe em https://www.postgresql.org/download/windows/'
+      IS_WIN ? 'Instale o PostgreSQL: https://www.postgresql.org/download/windows/'
         : 'Execute sudo ./instalar.sh (instala automaticamente) ou: sudo apt install postgresql');
   }
   ok(`PostgreSQL encontrado em ${pgBin}`);
   if (!isAdmin()) warn('Sem privilégios de administrador: a inicialização automática e o firewall não serão configurados.');
-  return pgBin;
+  return { pgBin, pgInstall };
 }
 
 /** Dependências já presentes (pacote offline gerado por "npm run pacote")? */
@@ -182,6 +264,21 @@ function installDeps() {
  * Executa SQL como superusuário do PostgreSQL. No Linux, executando como root, usa o usuário
  * de sistema "postgres" (autenticação local, sem senha). Caso contrário, conecta com usuário e senha.
  */
+/** Logo após a instalação, o serviço do PostgreSQL pode levar alguns segundos para aceitar conexões. */
+async function connectWithRetry(makeClient, seconds = 30) {
+  for (let i = 0; ; i++) {
+    const client = makeClient();
+    try {
+      await client.connect();
+      return client;
+    } catch (err) {
+      await client.end().catch(() => {});
+      if (err.code !== 'ECONNREFUSED' || i >= seconds) throw err;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+
 async function superuserConnection() {
   if (!IS_WIN && isAdmin() && which('runuser') && !process.env.PG_SUPERUSER_PASSWORD) {
     const probe = run('runuser', ['-u', 'postgres', '--', 'psql', '-tAc', 'SELECT 1']);
@@ -201,24 +298,35 @@ async function superuserConnection() {
   const host = process.env.PG_HOST || 'localhost';
   const port = Number(process.env.PG_PORT || 5432);
   const user = process.env.PG_SUPERUSER || 'postgres';
-  let password = process.env.PG_SUPERUSER_PASSWORD || '';
+  let password = process.env.PG_SUPERUSER_PASSWORD || passwordFromFile();
+  if (!process.env.PG_SUPERUSER_PASSWORD && password) info(`Usando a senha do banco gravada em ${path.basename(PG_PASSWORD_FILE)}`);
+  let explained = false;
   for (let attempt = 1; ; attempt++) {
-    if (!password && !AUTO) password = await askHidden(`Senha do usuário "${user}" do PostgreSQL (definida na instalação do PostgreSQL)`);
-    const client = new Client({ host, port, user, password, database: 'postgres' });
+    if (!password && !AUTO) {
+      if (!explained) {
+        info('O PostgreSQL já está instalado neste computador. Para criar o banco do MotoControl,');
+        info(`informe a senha do usuário "${user}" — a que foi definida quando o PostgreSQL foi instalado.`);
+        explained = true;
+      }
+      password = await askHidden(`Senha do usuário "${user}" do PostgreSQL`);
+    }
     try {
-      await client.connect();
+      const client = await connectWithRetry(() => new Client({ host, port, user, password, database: 'postgres' }));
       ok(`Conectado ao PostgreSQL em ${host}:${port} como "${user}"`);
       return {
         async query(sql) { const r = await client.query(sql); return r.rows.map((x) => Object.values(x).join('|')).join('\n'); },
         end: () => client.end(),
       };
     } catch (err) {
-      await client.end().catch(() => {});
       if (err.code === 'ECONNREFUSED') {
         fail(`O PostgreSQL não está aceitando conexões em ${host}:${port}.`,
           IS_WIN ? 'Abra "Serviços" (services.msc) e inicie o serviço postgresql.' : 'Inicie com: sudo systemctl start postgresql');
       }
       if (err.code === '28P01' && !AUTO && attempt < 3) { warn('Senha incorreta.'); password = ''; continue; }
+      if (err.code === '28P01') {
+        fail('Senha do PostgreSQL incorreta.',
+          'Se ninguém sabe essa senha, veja "Esqueci a senha do PostgreSQL" em docs/manual/06-servidor-e-backup.md.');
+      }
       fail(`Não foi possível conectar ao PostgreSQL: ${err.message}`);
     }
   }
@@ -474,7 +582,7 @@ async function waitForHealth(port, timeoutMs = 30000) {
   return false;
 }
 
-async function finish(serviceStarted, env, generatedAdminPassword) {
+async function finish(serviceStarted, env, generatedAdminPassword, pgInstall) {
   step(7, 'Verificando');
   const port = Number(env.PORT) || PORT;
   if (serviceStarted) {
@@ -500,6 +608,14 @@ async function finish(serviceStarted, env, generatedAdminPassword) {
   if (generatedAdminPassword) {
     console.log(`  Senha provisória: ${color('1;33', generatedAdminPassword)}  (será pedida a troca no primeiro acesso)`);
   }
+  if (pgInstall) {
+    console.log(`\n  Banco de dados (PostgreSQL), usuário ${color('1', 'postgres')}:`);
+    if (pgInstall.generated) {
+      console.log(`  Senha: ${color('1;33', pgInstall.password)}  (também salva em ${path.basename(PG_PASSWORD_FILE)} — guarde em local seguro e apague o arquivo)`);
+    } else {
+      console.log('  Senha: a que você definiu durante a instalação. Guarde-a junto com a senha do admin.');
+    }
+  }
   console.log('\n  Próximos passos: entre como admin, cadastre os funcionários em "Funcionários" e');
   console.log('  copie periodicamente a pasta "backups" para um pendrive ou HD externo.\n');
 }
@@ -507,14 +623,14 @@ async function finish(serviceStarted, env, generatedAdminPassword) {
 // ---------------------------------------------------------------- principal
 (async () => {
   console.log(color('1', '\n  MotoControl — instalação do servidor da oficina\n'));
-  const pgBin = checkNode();
+  const { pgBin, pgInstall } = await checkPrerequisites();
   installDeps();
   const existingEnv = readEnvFile();
   const { databaseUrl } = await setupDatabase(existingEnv);
   const env = writeEnv(existingEnv, databaseUrl, pgBin);
   const generated = await setupSchemaAndAdmin(env);
   const started = await setupService();
-  await finish(started, env, generated);
+  await finish(started, env, generated, pgInstall);
   if (rl) rl.close();
 })().catch((err) => {
   if (rl) rl.close();

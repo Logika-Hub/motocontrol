@@ -14,15 +14,17 @@ Feito uma única vez, por quem entende um pouco de computador:
 
 1. Copie a pasta do MotoControl para o disco do servidor — por exemplo, `C:\MotoControl`. **Não** rode do pendrive.
 2. Clique com o botão direito em **`instalar.bat`** → **Executar como administrador**.
-3. Defina a senha do usuário **admin** quando for pedido.
-4. No final, anote o **endereço para os outros computadores** que aparece na tela (ex.: `http://192.168.0.100:3000`).
-5. Copie o arquivo **`MotoControl (outros computadores).url`**, criado na pasta do sistema, para a área de trabalho de cada computador da oficina.
+3. Se o PostgreSQL (banco de dados) ainda não estiver instalado, o instalador pede para você **definir a senha do banco**. Ela não é usada no dia a dia, mas é necessária para reinstalar ou dar manutenção — **anote-a em local seguro**, pois ela não fica salva no computador. (Mínimo de 8 caracteres, sem espaços nem os símbolos `" ' ^ % ! & | < >`.)
+   Se o PostgreSQL já estiver instalado, o instalador pede a senha que foi definida quando ele foi instalado.
+4. Defina a senha do usuário **admin** do MotoControl quando for pedido.
+5. No final, anote o **endereço para os outros computadores** que aparece na tela (ex.: `http://192.168.0.100:3000`).
+6. Copie o arquivo **`MotoControl (outros computadores).url`**, criado na pasta do sistema, para a área de trabalho de cada computador da oficina.
 
 O instalador instala o que for preciso (Node.js e banco de dados PostgreSQL), cria o banco, configura o sistema para iniciar sozinho com o Windows, libera o acesso no firewall e cria o atalho **MotoControl** na área de trabalho.
 
 > **Endereço fixo:** peça a quem configurou a internet da oficina para **reservar o IP do servidor** no roteador. Sem isso, o endereço pode mudar e os atalhos dos outros computadores param de funcionar.
 
-> Se o instalador precisar instalar o PostgreSQL, ele cria o arquivo `postgres-superusuario.txt` com a senha do banco. Guarde essa senha em local seguro (junto com a senha do admin) e **apague o arquivo**.
+> **Guarde juntas** a senha do banco (PostgreSQL) e a senha do admin do MotoControl, em local seguro fora do computador (cofre de senhas, envelope lacrado).
 
 Em Linux, use `sudo ./instalar.sh`.
 
@@ -69,6 +71,21 @@ Restaurar **substitui todos os dados atuais** pelos do backup. Use só em caso d
 1. Gere um backup em *Administração* e rode **`parar.bat`**.
 2. Copie os arquivos da nova versão **por cima** da pasta atual. **Não apague** os arquivos `.env` (configuração) e a pasta `backups`.
 3. Rode **`instalar.bat`** como administrador. Ele mantém os dados e a configuração e atualiza o banco automaticamente.
+
+## Esqueci a senha do PostgreSQL
+
+*Para quem tem familiaridade com o computador.* No dia a dia essa senha não é usada — o MotoControl tem a própria senha de acesso ao banco, no arquivo `.env`. Ela só é pedida quando o instalador precisa criar o banco de novo (por exemplo, numa reinstalação em que o `.env` foi perdido). Para definir uma senha nova:
+
+1. Rode **`parar.bat`**.
+2. Abra o Bloco de Notas **como administrador** e abra o arquivo `C:\Program Files\PostgreSQL\17\data\pg_hba.conf` (o número pode ser outro, conforme a versão).
+3. Nas linhas que começam com `host` e contêm `127.0.0.1/32` e `::1/128`, troque `scram-sha-256` por `trust` e salve.
+4. Em **Serviços** (`services.msc`), reinicie o serviço **postgresql**.
+5. Abra o Prompt de Comando e execute (troque `NovaSenha123` pela senha nova):
+   ```
+   "C:\Program Files\PostgreSQL\17\bin\psql" -U postgres -h 127.0.0.1 -c "ALTER USER postgres PASSWORD 'NovaSenha123'"
+   ```
+6. **Volte** as linhas do passo 3 para `scram-sha-256`, salve e reinicie o serviço **postgresql** de novo. Não pule este passo: com `trust`, qualquer programa do computador acessa o banco sem senha.
+7. Rode o instalador ou **`iniciar.bat`** normalmente.
 
 ## Problemas no servidor
 

@@ -3,7 +3,8 @@ rem Instalador do MotoControl para Windows 10/11.
 rem Clique com o botao direito e escolha "Executar como administrador".
 rem
 rem Usa os instaladores da pasta "instaladores" (pacote gerado por "npm run pacote", sem internet).
-rem Se nao estiverem la, baixa pelo winget (precisa de internet).
+rem Se nao estiverem la, baixa pelo winget (precisa de internet). Aqui so o Node.js e instalado;
+rem o restante (inclusive o PostgreSQL) fica com o scripts\setup.js.
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
 cd /d "%~dp0"
@@ -57,37 +58,9 @@ if !NODE_MAJOR! LSS 20 (
   goto :fim_erro
 )
 
-rem ---------------------------------------------------------------- PostgreSQL
-set "PG_FOUND="
-where pg_dump >nul 2>&1 && set "PG_FOUND=1"
-if not defined PG_FOUND if exist "%ProgramFiles%\PostgreSQL\" (
-  for /d %%d in ("%ProgramFiles%\PostgreSQL\*") do if exist "%%d\bin\pg_dump.exe" set "PG_FOUND=1"
-)
-if not defined PG_FOUND (
-  rem Senha do superusuario "postgres" gerada aleatoriamente e repassada ao instalador do MotoControl.
-  for /f "usebackq" %%p in (`node -e "console.log(require('crypto').randomBytes(12).toString('hex'))"`) do set "PG_SUPERUSER_PASSWORD=%%p"
-  set "PG_ARGS=--mode unattended --unattendedmodeui none --superpassword !PG_SUPERUSER_PASSWORD! --serverport 5432 --disable-components stackbuilder"
-  set "PG_EXE="
-  for %%f in ("instaladores\postgresql-*-windows-x64.exe") do set "PG_EXE=%%~ff"
-  if defined PG_EXE (
-    echo ==^> Instalando PostgreSQL a partir de !PG_EXE! ^(pode levar alguns minutos^)...
-    start "" /wait "!PG_EXE!" !PG_ARGS!
-    if errorlevel 1 goto :fim_erro
-  ) else (
-    call :need_winget || goto :fim_erro
-    echo ==^> Baixando e instalando PostgreSQL 17 ^(pode levar alguns minutos^)...
-    winget install --id PostgreSQL.PostgreSQL.17 -e --silent --accept-package-agreements --accept-source-agreements --override "!PG_ARGS!"
-    if errorlevel 1 goto :fim_erro
-  )
-  > "%~dp0postgres-superusuario.txt" (
-    echo Senha do usuario "postgres" do PostgreSQL, gerada na instalacao do MotoControl:
-    echo !PG_SUPERUSER_PASSWORD!
-    echo Guarde em local seguro e apague este arquivo.
-  )
-  echo  Senha do superusuario do PostgreSQL salva em postgres-superusuario.txt
-)
-
-rem ---------------------------------------------------------------- MotoControl
+rem ---------------------------------------------------------------- PostgreSQL e MotoControl
+rem O PostgreSQL e instalado pelo scripts\setup.js (pasta "instaladores" ou winget), que pede
+rem a senha do banco ao usuario.
 node scripts\setup.js %*
 if errorlevel 1 goto :fim_erro
 echo.
