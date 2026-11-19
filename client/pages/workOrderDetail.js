@@ -43,6 +43,10 @@ export async function render(el, [id], ctx) {
     ].filter(Boolean);
 
     el.innerHTML = html`
+      <div class="print-only print-header">
+        <div><b>MotoControl</b><span>Ordem de serviço</span></div>
+        <div class="right">Emitida em ${fmtDateTime(new Date())}<br>por ${ctx.user.name}</div>
+      </div>
       <div class="page-head">
         <div><a class="back" href="#/comandas">‹ Comandas</a>
           <h1>${wo.code} ${raw(statusBadge(wo.status))}</h1>
@@ -113,7 +117,12 @@ export async function render(el, [id], ctx) {
             <button class="btn btn-primary" type="submit">Registrar</button>
           </form>`) : ''}
         <ol class="timeline">${[...wo.updates].reverse().map((u) => raw(timelineItem(u, open)))}</ol>
-      </section>`;
+      </section>
+
+      <div class="print-only signatures">
+        <div><span></span>Cliente — ${wo.customer_name}</div>
+        <div><span></span>Responsável pela oficina</div>
+      </div>`;
     bind();
   }
 

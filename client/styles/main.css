@@ -198,10 +198,49 @@ h1 .badge { font-size: .8rem; }
   .timeline-form { grid-template-columns: 1fr; }
 }
 
-/* Impressão da comanda */
+/* Impressão da comanda (Imprimir / Salvar como PDF) */
+.print-only { display: none; }
+@page {
+  size: A4;
+  margin: 16mm 15mm 18mm;
+  @bottom-right { content: "Página " counter(page) " de " counter(pages); font-size: 8pt; color: #667085; }
+}
 @media print {
-  .topbar, .actions, .back, .timeline-form, .tl-actions, .card-head .btn, #toasts, .table .btn { display: none !important; }
-  body { background: #fff; }
-  .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+  :root { font-size: 10pt; }
+  body { background: #fff; color: #000; }
+  .topbar, .actions, .back, .timeline-form, .tl-actions, .card-head .btn, #toasts, .table .btn, .modal-backdrop { display: none !important; }
   .page { padding: 0; max-width: none; }
+  a { color: inherit; }
+  .print-only { display: block; }
+
+  .print-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 3mm; margin-bottom: 5mm; font-size: 9pt; }
+  .print-header b { font-size: 13pt; display: block; }
+  .print-header span { text-transform: uppercase; letter-spacing: .08em; color: #444; }
+  .page-head { margin-bottom: 4mm; }
+  h1 { font-size: 18pt; }
+  h2 { font-size: 11pt; margin-bottom: 2.5mm; break-after: avoid; }
+
+  .grid-2 { grid-template-columns: 1fr 1fr; gap: 0 4mm; }
+  .card { box-shadow: none; border: 1px solid #bbb; border-radius: 2mm; padding: 4mm 5mm; margin-bottom: 4mm; overflow: visible; }
+  .grid-2 > .card, .signatures { break-inside: avoid; }
+  .card-head { margin-bottom: 2.5mm; }
+  .info { gap: 2.5mm 5mm; }
+  .info:not(.info-stack) { grid-template-columns: 1fr 1fr; }
+  .info dt { font-size: 7.5pt; color: #555; }
+
+  .badge { border: 1px solid currentColor; background: none !important; }
+  .plate { border-width: 1px; }
+  .table th { font-size: 7.5pt; color: #555; padding: 1.5mm 2mm; }
+  .table td { padding: 2mm; }
+  .table tr { break-inside: avoid; }
+  .muted { color: #555; }
+
+  /* Histórico em ordem cronológica no papel */
+  .timeline { display: flex; flex-direction: column-reverse; border-left-color: #bbb; }
+  .tl { break-inside: avoid; padding-bottom: 3mm; }
+  .tl::before { border-color: #fff; }
+
+  .signatures { display: flex; gap: 12mm; margin-top: 16mm; font-size: 9pt; text-align: center; }
+  .signatures > div { flex: 1; }
+  .signatures span { display: block; border-top: 1px solid #000; margin-bottom: 1.5mm; }
 }
