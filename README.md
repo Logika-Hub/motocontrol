@@ -163,3 +163,9 @@ tests/                    testes de integração
 | POST/DELETE | `/api/work-orders/:id/items[/:itemId[/done]]` | Serviços e peças |
 | GET/POST/PATCH | `/api/users[/:id]` · `/:id/reset-password` | Funcionários (admin) |
 | GET/POST | `/api/admin/audit` · `/api/admin/backups` | Auditoria e backups (admin) |
+
+## Licença
+
+Software proprietário — todos os direitos reservados. Veja [LICENSE](LICENSE).
+
+As bibliotecas de terceiros (em `node_modules`) seguem suas próprias licenças — MIT, ISC e BSD —, todas permissivas e compatíveis com uso comercial; basta preservar os avisos de copyright delas, que já acompanham cada pacote.

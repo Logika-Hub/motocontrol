@@ -1,21 +1,25 @@
-MIT License
+MotoControl — Licença de Software Proprietário
 
-Copyright (c) 2026 Pedro Alves
+Copyright (c) 2026 Pedro Alves. Todos os direitos reservados.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Este software, incluindo seu código-fonte, código-objeto, documentação, interface,
+estrutura de banco de dados e demais materiais relacionados (o "Software"), é de
+propriedade exclusiva do titular acima e está protegido pela Lei nº 9.609/1998
+(Lei do Software) e pela Lei nº 9.610/1998 (Lei de Direitos Autorais).
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Nenhuma licença ou direito é concedido por este aviso. É proibido, sem autorização
+prévia e por escrito do titular:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  1. copiar, reproduzir, distribuir, sublicenciar, vender, alugar ou ceder o Software,
+     no todo ou em parte;
+  2. modificar, adaptar, traduzir ou criar obras derivadas do Software;
+  3. realizar engenharia reversa, descompilar ou desmontar o Software, exceto nos
+     limites expressamente permitidos pela legislação aplicável;
+  4. remover ou alterar avisos de direitos autorais ou de propriedade.
+
+O uso do Software por clientes é regido exclusivamente pelo contrato de licença de
+uso firmado com o titular. Na ausência de contrato, nenhum uso é autorizado.
+
+O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA", SEM GARANTIAS DE QUALQUER
+TIPO, EXPRESSAS OU IMPLÍCITAS, EXCETO AQUELAS PREVISTAS EM CONTRATO ESPECÍFICO
+FIRMADO COM O TITULAR OU EXIGIDAS POR LEI.
