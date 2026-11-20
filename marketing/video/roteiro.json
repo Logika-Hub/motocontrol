@@ -1,0 +1,45 @@
+{
+  "titulo": "MotoControl — vídeo de apresentação",
+  "cenas": [
+    { "id": "gancho", "falas": [
+      "Quantas vezes por dia alguém na sua oficina pergunta:",
+      "em que pé está aquela moto?"
+    ]},
+    { "id": "problema", "falas": [
+      "Caderno, papel preso no guidão, mensagem perdida no celular.",
+      "Quando a informação se espalha, a oficina perde tempo,",
+      "perde o histórico e perde a confiança do cliente."
+    ]},
+    { "id": "solucao", "falas": [
+      "O MotoControl organiza a sua oficina em torno da comanda.",
+      "Cada moto que entra ganha uma ordem de serviço numerada,",
+      "com o cliente, a reclamação e a previsão de entrega."
+    ]},
+    { "id": "mecanico", "falas": [
+      "O mecânico registra o diagnóstico, os serviços e as peças.",
+      "Cada registro fica com o nome de quem fez e o horário."
+    ]},
+    { "id": "painel", "falas": [
+      "No painel, você vê na hora quantas motos estão em diagnóstico,",
+      "aguardando peças ou em execução."
+    ]},
+    { "id": "historico", "falas": [
+      "Quando o cliente volta, o histórico completo da moto está a um clique."
+    ]},
+    { "id": "acessos", "falas": [
+      "Cada funcionário tem o próprio acesso,",
+      "e nada é apagado sem deixar rastro."
+    ]},
+    { "id": "impressao", "falas": [
+      "Na entrega, a comanda sai impressa, com espaço para a assinatura do cliente."
+    ]},
+    { "id": "infra", "falas": [
+      "Funciona na rede da sua oficina, sem depender de internet,",
+      "com backup automático todos os dias."
+    ]},
+    { "id": "final", "falas": [
+      "MotoControl: sua oficina organizada, do recebimento à entrega.",
+      "Agende uma demonstração."
+    ]}
+  ]
+}

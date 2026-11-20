@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>MotoControl — vídeo</title>
+<style>
+  :root { --orange: #c2410c; --orange2: #f97316; --ink: #0f141b; --panel: #1c2430; --muted: #9aa4b2; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--ink); font-family: Inter, system-ui, sans-serif; color: #fff; }
+  #stage { position: absolute; inset: 0; overflow: hidden;
+    background: radial-gradient(1200px 800px at 75% 30%, #232d3b 0%, #141a23 55%, #0d1117 100%); }
+  #glow { position: absolute; width: 1400px; height: 1400px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,.22) 0%, rgba(249,115,22,0) 60%); left: 900px; top: -500px; }
+  #grid { position: absolute; inset: 0; opacity: .07;
+    background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+    background-size: 64px 64px; mask-image: radial-gradient(circle at 70% 40%, #000 0%, transparent 70%); }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .rv { will-change: transform, opacity; }
+
+  /* Painel de texto à esquerda */
+  .side { position: absolute; left: 96px; top: 0; bottom: 0; width: 470px; display: flex; flex-direction: column; justify-content: center; padding-bottom: 60px; }
+  .kicker { color: var(--orange2); font-weight: 700; letter-spacing: .18em; font-size: 22px; margin-bottom: 22px; }
+  .headline { font-size: 54px; line-height: 1.08; font-weight: 800; letter-spacing: -.02em; margin-bottom: 34px; }
+  .bullets { list-style: none; display: flex; flex-direction: column; gap: 18px; }
+  .bullets li { font-size: 28px; color: #d7dce3; display: flex; gap: 14px; align-items: center; }
+  .bullets li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--orange2); flex: none; box-shadow: 0 0 0 5px rgba(249,115,22,.18); }
+
+  /* Janela de navegador com a tela real */
+  .browser { position: absolute; left: 616px; top: 150px; width: 1224px; height: 724px; border-radius: 16px; overflow: hidden;
+    background: #fff; box-shadow: 0 40px 90px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08); }
+  .browser .bar { height: 36px; background: #e9ebef; display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+  .browser .bar i { width: 12px; height: 12px; border-radius: 50%; background: #f87171; display: block; }
+  .browser .bar i:nth-child(2) { background: #fbbf24; } .browser .bar i:nth-child(3) { background: #34d399; }
+  .browser .bar span { margin-left: 18px; flex: 1; height: 22px; border-radius: 6px; background: #fff; color: #667085; font-size: 13px; display: flex; align-items: center; padding-left: 12px; }
+  .browser .view { position: absolute; top: 36px; left: 0; width: 1224px; height: 688px; overflow: hidden; }
+  .browser .cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+  .browser .cam img { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+  .hl { position: absolute; border: 6px solid var(--orange2); border-radius: 18px; opacity: 0;
+    box-shadow: 0 0 0 9999px rgba(15,20,27,.0), 0 0 40px rgba(249,115,22,.55); }
+
+  /* Gancho */
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-bottom: 80px; }
+  .q-small { font-size: 46px; color: #c4cbd6; font-weight: 500; margin-bottom: 26px; }
+  .q-big { font-size: 112px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+  .q-big em { font-style: normal; color: var(--orange2); }
+
+  /* Problema */
+  .cards { position: absolute; left: 0; right: 0; top: 230px; display: flex; justify-content: center; gap: 48px; }
+  .pcard { width: 420px; height: 330px; border-radius: 24px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; position: relative; }
+  .pcard svg { width: 120px; height: 120px; }
+  .pcard b { font-size: 34px; font-weight: 700; }
+  .pcard .x { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+  .pcard .x::before, .pcard .x::after { content: ""; position: absolute; width: 260px; height: 14px; border-radius: 7px; background: #ef4444; transform: rotate(45deg); }
+  .pcard .x::after { transform: rotate(-45deg); }
+  .losses { position: absolute; left: 0; right: 0; top: 640px; display: flex; justify-content: center; gap: 30px; }
+  .loss { font-size: 36px; font-weight: 700; padding: 16px 30px; border-radius: 999px; background: rgba(239,68,68,.14); color: #fca5a5; border: 1px solid rgba(239,68,68,.35); }
+
+  /* Logo */
+  .logo { display: flex; align-items: center; gap: 30px; }
+  .logo img { width: 150px; height: 150px; border-radius: 32px; box-shadow: 0 20px 60px rgba(194,65,12,.45); }
+  .logo span { font-size: 120px; font-weight: 800; letter-spacing: -.03em; }
+  .tagline { font-size: 44px; color: #c4cbd6; margin-top: 34px; font-weight: 500; }
+
+  /* Papel impresso */
+  .paper { position: absolute; left: 1060px; top: 100px; width: 540px; border-radius: 6px; overflow: hidden; background: #fff;
+    box-shadow: 0 50px 100px rgba(0,0,0,.6); transform-origin: 50% 50%; }
+  .paper img { width: 100%; display: block; }
+  .pen { position: absolute; left: 1080px; top: 640px; width: 420px; height: 14px; }
+
+  /* Infra */
+  .tiles { position: absolute; left: 0; right: 0; top: 250px; display: flex; justify-content: center; gap: 44px; }
+  .tile { width: 470px; padding: 52px 40px; border-radius: 28px; background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    border: 1px solid rgba(255,255,255,.12); text-align: center; }
+  .tile svg { width: 110px; height: 110px; margin-bottom: 30px; }
+  .tile b { display: block; font-size: 38px; font-weight: 800; margin-bottom: 14px; }
+  .tile span { font-size: 27px; color: #c4cbd6; line-height: 1.35; }
+  .h-title { position: absolute; left: 0; right: 0; top: 120px; text-align: center; font-size: 56px; font-weight: 800; letter-spacing: -.02em; }
+
+  /* Final */
+  .cta { margin-top: 56px; font-size: 40px; font-weight: 800; padding: 26px 58px; border-radius: 999px; background: var(--orange); box-shadow: 0 20px 50px rgba(194,65,12,.5); }
+
+  /* Legenda */
+  #sub { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); width: max-content; max-width: 1760px; text-align: center;
+    font-size: 38px; line-height: 1.3; font-weight: 600; padding: 14px 32px; border-radius: 14px; background: rgba(8,11,16,.82);
+    color: #fff; opacity: 0; text-shadow: 0 2px 4px rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <div id="grid"></div>
+
+  <!-- 1 Gancho -->
+  <section class="scene" data-scene="gancho">
+    <div class="center">
+      <div class="q-small rv" data-at="f0+0">Quantas vezes por dia alguém pergunta:</div>
+      <div class="q-big rv" data-at="f1-0.1">“Em que pé está</div>
+      <div class="q-big rv" data-at="f1+0.3"><em>aquela moto?</em>”</div>
+    </div>
+  </section>
+
+  <!-- 2 Problema -->
+  <section class="scene" data-scene="problema">
+    <div class="h-title rv" data-at="0.2">Informação espalhada custa caro</div>
+    <div class="cards">
+      <div class="pcard rv" data-at="f0+0">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#e5e7eb" stroke-width="3" stroke-linejoin="round"><rect x="14" y="8" width="38" height="48" rx="4"/><path d="M14 18h-5M14 30h-5M14 42h-5M22 20h22M22 30h22M22 40h14"/></svg>
+        <b>Caderno</b><div class="x" data-x="f1+0.0"></div>
+      </div>
+      <div class="pcard rv" data-at="f0+0.9">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#e5e7eb" stroke-width="3" stroke-linejoin="round"><path d="M12 10h40v32L38 56H12z"/><path d="M38 56V42h14M20 22h24M20 31h18"/></svg>
+        <b>Papel no guidão</b><div class="x" data-x="f1+0.35"></div>
+      </div>
+      <div class="pcard rv" data-at="f0+2.0">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#e5e7eb" stroke-width="3" stroke-linejoin="round"><rect x="18" y="6" width="28" height="52" rx="5"/><path d="M28 50h8"/><path d="M8 20h14l-4 5" /></svg>
+        <b>Mensagem perdida</b><div class="x" data-x="f1+0.7"></div>
+      </div>
+    </div>
+    <div class="losses">
+      <div class="loss rv" data-at="f1+1.2">Perde tempo</div>
+      <div class="loss rv" data-at="f2+0.2">Perde o histórico</div>
+      <div class="loss rv" data-at="f2+1.3">Perde a confiança do cliente</div>
+    </div>
+  </section>
+
+  <!-- 3 Solução: logo e nova comanda -->
+  <section class="scene" data-scene="solucao">
+    <div class="center intro" style="--dummy:0">
+      <div class="logo rv" data-at="0.1"><img src="logo.svg" alt=""><span>MotoControl</span></div>
+      <div class="tagline rv" data-at="0.6">A sua oficina organizada em torno da comanda</div>
+    </div>
+    <div class="side">
+      <div class="kicker rv" data-at="f1-0.2">ATENDIMENTO</div>
+      <div class="headline rv" data-at="f1+0">Cada moto, uma ordem de serviço</div>
+      <ul class="bullets">
+        <li class="rv" data-at="f1+1.2">Número sequencial</li>
+        <li class="rv" data-at="f2+0.3">Cliente e reclamação</li>
+        <li class="rv" data-at="f2+1.5">Previsão de entrega</li>
+      </ul>
+    </div>
+    <div class="browser rv" data-at="f1-0.4" data-shot="nova-comanda"></div>
+  </section>
+
+  <!-- 4 Mecânico -->
+  <section class="scene" data-scene="mecanico">
+    <div class="side">
+      <div class="kicker rv" data-at="0.1">MECÂNICO</div>
+      <div class="headline rv" data-at="0.25">Tudo registrado, com nome e horário</div>
+      <ul class="bullets">
+        <li class="rv" data-at="f0+1.0">Diagnóstico</li>
+        <li class="rv" data-at="f0+1.8">Serviços e peças</li>
+        <li class="rv" data-at="f1+0.6">Quem fez e quando</li>
+      </ul>
+    </div>
+    <div class="browser rv" data-at="0" data-shot="historico"></div>
+  </section>
+
+  <!-- 5 Painel -->
+  <section class="scene" data-scene="painel">
+    <div class="side">
+      <div class="kicker rv" data-at="0.1">GESTÃO</div>
+      <div class="headline rv" data-at="0.25">A oficina inteira em uma tela</div>
+      <ul class="bullets">
+        <li class="rv" data-at="f0+1.6">Motos em cada etapa</li>
+        <li class="rv" data-at="f1+0.0">Entregas atrasadas</li>
+        <li class="rv" data-at="f1+0.8">Atividades da equipe</li>
+      </ul>
+    </div>
+    <div class="browser rv" data-at="0" data-shot="dashboard"></div>
+  </section>
+
+  <!-- 6 Histórico da moto -->
+  <section class="scene" data-scene="historico">
+    <div class="side">
+      <div class="kicker rv" data-at="0.1">HISTÓRICO</div>
+      <div class="headline rv" data-at="0.25">A ficha completa de cada moto</div>
+      <ul class="bullets">
+        <li class="rv" data-at="f0+1.4">Todas as comandas</li>
+        <li class="rv" data-at="f0+2.2">Serviços, peças e km</li>
+      </ul>
+    </div>
+    <div class="browser rv" data-at="0" data-shot="moto-historico"></div>
+  </section>
+
+  <!-- 7 Acessos -->
+  <section class="scene" data-scene="acessos">
+    <div class="side">
+      <div class="kicker rv" data-at="0.1">SEGURANÇA</div>
+      <div class="headline rv" data-at="0.25">Cada funcionário com o próprio acesso</div>
+      <ul class="bullets">
+        <li class="rv" data-at="f0+0.8">Administrador, atendente, mecânico</li>
+        <li class="rv" data-at="f1+0.3">Nada é apagado sem rastro</li>
+      </ul>
+    </div>
+    <div class="browser rv" data-at="0" data-shot="funcionarios"></div>
+  </section>
+
+  <!-- 8 Impressão -->
+  <section class="scene" data-scene="impressao">
+    <div class="side" style="width:640px">
+      <div class="kicker rv" data-at="0.1">ENTREGA</div>
+      <div class="headline rv" data-at="0.25">Comanda impressa, com assinatura do cliente</div>
+    </div>
+    <div class="paper rv" data-at="0.15" data-paper="1"><img src="shots/impressao.png" alt=""></div>
+  </section>
+
+  <!-- 9 Infraestrutura -->
+  <section class="scene" data-scene="infra">
+    <div class="h-title rv" data-at="0.1">Feito para a rotina da oficina</div>
+    <div class="tiles">
+      <div class="tile rv" data-at="f0+0.2">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#f97316" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="10" width="48" height="32" rx="4"/><path d="M24 52h16M32 42v10"/><circle cx="32" cy="26" r="6"/></svg>
+        <b>Rede local</b><span>Funciona dentro da oficina, sem depender de internet</span>
+      </div>
+      <div class="tile rv" data-at="f1+0.0">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#f97316" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="32" cy="14" rx="20" ry="7"/><path d="M12 14v18c0 4 9 7 20 7s20-3 20-7V14"/><path d="M12 32v16c0 4 9 7 20 7s20-3 20-7V32"/></svg>
+        <b>Backup diário</b><span>Cópia automática dos dados todos os dias</span>
+      </div>
+      <div class="tile rv" data-at="f1+1.0">
+        <svg viewBox="0 0 64 64" fill="none" stroke="#f97316" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M32 8v32M20 28l12 12 12-12"/><path d="M10 44v8a4 4 0 0 0 4 4h36a4 4 0 0 0 4-4v-8"/></svg>
+        <b>Instalação simples</b><span>Instalador automático, pronto em minutos</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 Final -->
+  <section class="scene" data-scene="final">
+    <div class="center">
+      <div class="logo rv" data-at="0.1"><img src="logo.svg" alt=""><span>MotoControl</span></div>
+      <div class="tagline rv" data-at="0.7">Sua oficina organizada, do recebimento à entrega.</div>
+      <div class="cta rv" data-at="f1+0">Agende uma demonstração</div>
+    </div>
+  </section>
+
+  <div id="sub"></div>
+</div>
+
+<script>
+const TL = window.__TIMELINE__;
+const RECTS = window.__RECTS__;
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+
+// Destaques e enquadramento de cada tela (coordenadas da captura 1920x1080)
+const SHOTS = {
+  'nova-comanda':  { img: 'shots/nova-comanda.png',   hls: [['moto', 'f1+0.6'], ['atendimento', 'f2+0']] },
+  'historico':     { img: 'shots/historico.png',      hls: [['timeline', 'f0+0.8']] },
+  'dashboard':     { img: 'shots/dashboard.png',      hls: [['stats', 'f0+1.2'], ['feed', 'f1+0.8']] },
+  'moto-historico':{ img: 'shots/moto-historico.png', hls: [['history', 'f0+1.0']] },
+  'funcionarios':  { img: 'shots/funcionarios.png',   hls: [['tabela', 'f0+0.6']] },
+};
+const RECT_KEY = { 'nova-comanda': 'nova', 'historico': 'historico', 'dashboard': 'dashboard', 'moto-historico': 'moto', 'funcionarios': 'funcionarios' };
+
+const VIEW_W = 1224, VIEW_H = 688, BASE = VIEW_W / 1920;
+
+function build() {
+  document.querySelectorAll('.browser').forEach((b) => {
+    const s = SHOTS[b.dataset.shot];
+    b.innerHTML = `<div class="bar"><i></i><i></i><i></i><span>motocontrol · rede da oficina</span></div>
+      <div class="view"><div class="cam"><img src="${s.img}" alt="">${s.hls.map((h, i) => `<div class="hl" data-i="${i}"></div>`).join('')}</div></div>`;
+    const rects = RECTS[RECT_KEY[b.dataset.shot]];
+    b.querySelectorAll('.hl').forEach((el, i) => {
+      const [x, y, w, h] = rects[s.hls[i][0]];
+      const pad = 10;
+      Object.assign(el.style, { left: `${x - pad}px`, top: `${y - pad}px`, width: `${w + pad * 2}px`, height: `${Math.min(h, 1080 - y) + pad * 2}px` });
+    });
+  });
+}
+
+// "f1+0.3" -> início da fala 1 da cena + 0.3 s (relativo ao início da cena); "0.4" -> 0.4 s
+function at(spec, scene) {
+  const m = String(spec).match(/^f(\d+)([+-][\d.]+)?$/);
+  if (!m) return parseFloat(spec);
+  const f = scene.falas[Number(m[1])];
+  return f.inicio - scene.inicio + (m[2] ? parseFloat(m[2]) : 0);
+}
+
+function renderAt(t) {
+  const FADE = 0.5;
+  // fundo vivo
+  document.getElementById('glow').style.transform = `translate(${Math.sin(t / 7) * 120}px, ${Math.cos(t / 9) * 80}px)`;
+  for (const sc of TL.cenas) {
+    const el = document.querySelector(`[data-scene="${sc.id}"]`);
+    const isFirst = sc === TL.cenas[0];
+    // Passagem sem sobreposição: a cena sai nos últimos 0,35 s e a próxima entra em seguida
+    const fin = isFirst ? 1 : easeInOut(prog(t, sc.inicio, sc.inicio + 0.45));
+    const fout = sc === TL.cenas[TL.cenas.length - 1] ? 1 - prog(t, sc.fim - 1.0, sc.fim) : 1 - easeInOut(prog(t, sc.fim - 0.35, sc.fim));
+    const alpha = Math.min(fin, fout);
+    el.style.opacity = alpha;
+    el.style.visibility = alpha > 0.001 ? 'visible' : 'hidden';
+    if (alpha <= 0.001) continue;
+    const lt = t - sc.inicio;
+    const scene = { ...sc, falas: TL.falas.filter((f) => f.cena === sc.id) };
+
+    el.querySelectorAll('.rv').forEach((r) => {
+      const a = at(r.dataset.at, scene);
+      const p = easeOut(prog(lt, a, a + 0.6));
+      let extra = '';
+      if (r.classList.contains('browser')) extra = ` scale(${0.94 + 0.06 * p})`;
+      if (r.dataset.paper) extra = ` rotate(${(1 - p) * 8 - 3}deg) scale(${0.9 + 0.1 * p})`;
+      r.style.opacity = p;
+      r.style.transform = `translateY(${(1 - p) * (r.classList.contains('browser') || r.dataset.paper ? 60 : 30)}px)${extra}`;
+    });
+    el.querySelectorAll('.x').forEach((x) => {
+      const a = at(x.dataset.x, scene);
+      const p = easeOut(prog(lt, a, a + 0.35));
+      x.style.opacity = p;
+      x.style.transform = `scale(${1.4 - 0.4 * p})`;
+      x.parentElement.querySelectorAll('svg, b').forEach((c) => { c.style.filter = p > 0 ? `grayscale(${p}) brightness(${1 - 0.5 * p})` : ''; c.style.opacity = 1 - 0.45 * p; });
+    });
+
+    // Introdução do logo na cena "solucao": aparece e sai antes da tela
+    if (sc.id === 'solucao') {
+      const intro = el.querySelector('.intro');
+      const out = easeInOut(prog(lt, at('f1-0.9', scene), at('f1-0.3', scene)));
+      intro.style.opacity = 1 - out;
+      intro.style.transform = `scale(${1 - 0.08 * out})`;
+    }
+
+    // Câmera: aproxima suavemente do destaque ativo
+    el.querySelectorAll('.browser').forEach((b) => {
+      const s = SHOTS[b.dataset.shot];
+      const rects = RECTS[RECT_KEY[b.dataset.shot]];
+      let cx = 960, cy = 540, zoom = 1, active = -1;
+      s.hls.forEach(([key, spec], i) => { if (lt >= at(spec, scene)) active = i; });
+      const hls = b.querySelectorAll('.hl');
+      hls.forEach((h, i) => {
+        const a = at(s.hls[i][1], scene);
+        const pin = easeOut(prog(lt, a, a + 0.5));
+        const next = s.hls[i + 1] ? at(s.hls[i + 1][1], scene) : Infinity;
+        const pout = Number.isFinite(next) ? prog(lt, next - 0.2, next + 0.2) : 0;
+        h.style.opacity = pin * (1 - pout);
+        h.style.transform = `scale(${1.06 - 0.06 * pin})`;
+      });
+      // enquadramento: interpola entre "tela inteira" e cada destaque
+      const frames = [{ t: 0, cx: 960, cy: 540, z: 1 }];
+      s.hls.forEach(([key, spec]) => {
+        const [x, y, w, h] = rects[key];
+        const hh = Math.min(h, 1080 - y);
+        const z = Math.min(1.3, Math.max(1.0, Math.min((1920 * 0.9) / w, (1080 * 0.9) / hh)));
+        frames.push({ t: at(spec, scene), cx: x + w / 2, cy: y + hh / 2, z });
+      });
+      let cur = frames[0];
+      for (let i = 1; i < frames.length; i++) {
+        const k = easeInOut(prog(lt, frames[i].t - 0.3, frames[i].t + 1.2));
+        cur = { cx: cur.cx + (frames[i].cx - cur.cx) * k, cy: cur.cy + (frames[i].cy - cur.cy) * k, z: cur.z + (frames[i].z - cur.z) * k };
+      }
+      zoom = cur.z * (1 + 0.02 * prog(lt, 0, sc.fim - sc.inicio)); // leve deriva contínua
+      const scale = BASE * zoom;
+      let tx = VIEW_W / 2 - cur.cx * scale, ty = VIEW_H / 2 - cur.cy * scale;
+      tx = Math.min(0, Math.max(VIEW_W - 1920 * scale, tx));
+      ty = Math.min(0, Math.max(VIEW_H - 1080 * scale, ty));
+      b.querySelector('.cam').style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    });
+  }
+
+  // Legenda
+  const sub = document.getElementById('sub');
+  const f = TL.falas.find((x) => t >= x.inicio - 0.05 && t <= x.fim + 0.25);
+  if (f) {
+    if (sub.textContent !== f.texto) sub.textContent = f.texto;
+    sub.style.opacity = Math.min(prog(t, f.inicio - 0.05, f.inicio + 0.1), 1 - prog(t, f.fim + 0.1, f.fim + 0.25));
+  } else {
+    sub.style.opacity = 0;
+  }
+}
+
+build();
+window.renderAt = renderAt;
+window.__ready = Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+</script>
+</body>
+</html>

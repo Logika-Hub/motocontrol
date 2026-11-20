@@ -1,0 +1,9 @@
+shots/
+audio/
+preview/
+timeline.json
+rects.json
+trilha.wav
+*.mp4
+*.srt
+*.png
