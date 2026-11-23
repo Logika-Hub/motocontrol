@@ -206,8 +206,19 @@ test('identidade da oficina: só admin altera, logo é validada pelos bytes e se
 
   const inicial = await request(app).get('/marca');
   assert.equal(inicial.status, 200);
-  assert.deepEqual([inicial.body.name, inicial.body.hasLogo], [null, false]);
+  assert.deepEqual([inicial.body.name, inicial.body.hasLogo, inicial.body.configured], [null, false, false]);
   assert.equal((await request(app).get('/marca/logo')).status, 404);
+
+  // Primeiro acesso: só admin dispensa; dispensar marca como configurado e audita uma única vez.
+  assert.equal((await joao.post('/api/admin/branding/skip')).status, 403);
+  const pulo = await admin.post('/api/admin/branding/skip');
+  assert.equal(pulo.status, 200);
+  assert.deepEqual([pulo.body.configured, pulo.body.name], [true, null]);
+  assert.equal((await admin.post('/api/admin/branding/skip')).status, 200);
+  const pulos = await pool.query("SELECT count(*)::int AS n FROM audit_logs WHERE action = 'pular_marca'");
+  assert.equal(pulos.rows[0].n, 1);
+  // Salvar também marca como configurado (instalação que nunca pulou).
+  await pool.query('UPDATE shop_settings SET setup_done_at = NULL');
 
   assert.equal((await joao.put('/api/admin/branding').send({ name: 'X' })).status, 403);
   assert.equal((await request(app).put('/api/admin/branding').send({ name: 'X' })).status, 401);
@@ -220,7 +231,7 @@ test('identidade da oficina: só admin altera, logo é validada pelos bytes e se
 
   const ok = await admin.put('/api/admin/branding').send({ name: '  Moto Peças do Zé ', logo: dataUrl });
   assert.equal(ok.status, 200);
-  assert.deepEqual([ok.body.name, ok.body.hasLogo], ['Moto Peças do Zé', true]);
+  assert.deepEqual([ok.body.name, ok.body.hasLogo, ok.body.configured], ['Moto Peças do Zé', true, true]);
   const logo = await request(app).get('/marca/logo');
   assert.equal(logo.status, 200);
   assert.equal(logo.headers['content-type'], 'image/png');

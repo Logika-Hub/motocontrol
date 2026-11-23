@@ -30,9 +30,11 @@ function parseLogo(dataUrl) {
 
 async function getBranding() {
   const { rows } = await query(
-    `SELECT name, logo IS NOT NULL AS has_logo, extract(epoch FROM updated_at)::bigint AS version FROM shop_settings WHERE id = 1`);
-  const r = rows[0] || { name: null, has_logo: false, version: 0 };
-  return { name: r.name, hasLogo: r.has_logo, version: Number(r.version) };
+    `SELECT name, logo IS NOT NULL AS has_logo, setup_done_at IS NOT NULL AS configured,
+            extract(epoch FROM updated_at)::bigint AS version
+       FROM shop_settings WHERE id = 1`);
+  const r = rows[0] || { name: null, has_logo: false, configured: false, version: 0 };
+  return { name: r.name, hasLogo: r.has_logo, configured: r.configured, version: Number(r.version) };
 }
 
 async function getLogo() {
@@ -56,8 +58,15 @@ async function updateBranding(body, userId) {
     logoSql = ', logo = $3, logo_mime = $4';
     changes.logo = `${mime}, ${buf.length} bytes`;
   }
-  await query(`UPDATE shop_settings SET name = $1, updated_by = $2, updated_at = now()${logoSql} WHERE id = 1`, params);
+  await query(`UPDATE shop_settings SET name = $1, updated_by = $2, updated_at = now(),
+    setup_done_at = COALESCE(setup_done_at, now())${logoSql} WHERE id = 1`, params);
   return { branding: await getBranding(), changes };
 }
 
-module.exports = { getBranding, getLogo, updateBranding, sniffImage, MAX_LOGO_BYTES };
+/** Dispensa a configuração do primeiro acesso sem alterar nome/logo. Retorna false se já estava feita. */
+async function skipSetup() {
+  const r = await query('UPDATE shop_settings SET setup_done_at = now() WHERE id = 1 AND setup_done_at IS NULL');
+  return r.rowCount > 0;
+}
+
+module.exports = { getBranding, skipSetup, getLogo, updateBranding, sniffImage, MAX_LOGO_BYTES };

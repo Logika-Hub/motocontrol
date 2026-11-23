@@ -97,12 +97,13 @@ Todas as ações de comanda devolvem a comanda completa atualizada.
 | GET / POST | `/admin/backups` (listar / gerar) | `backups:manage` |
 | GET | `/admin/backups/:arquivo` (download) | `backups:manage` |
 | PUT | `/admin/branding` `{name, logo?}` — `logo`: data URL PNG/JPEG/WEBP (≤ 512 KB), `null` remove, ausente mantém | `settings:manage` (só admin) |
+| POST | `/admin/branding/skip` — dispensa a configuração do primeiro acesso sem alterar nome/logo | `settings:manage` (só admin) |
 
 ### Identidade da oficina (pública, fora de `/api`)
 
 | Método | Rota | Resposta |
 |---|---|---|
-| GET | `/marca` | `{name, hasLogo, version}` |
+| GET | `/marca` | `{name, hasLogo, configured, version}` — `configured: false` faz o front abrir a configuração inicial para o admin |
 | GET | `/marca/logo` | A imagem (com `ETag`; 404 se não houver logo) |
 
 ## Exemplo com `curl`

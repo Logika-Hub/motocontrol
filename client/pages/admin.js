@@ -1,51 +1,15 @@
 import { api, qs } from '../scripts/api.js';
 import { html, raw, toast, showError, fmtDateTime, pager, confirmDialog } from '../scripts/ui.js';
-import { loadBrand, logoUrl } from '../scripts/brand.js';
+import { loadBrand, logoUrl, prepareLogo } from '../scripts/brand.js';
 
 const ACTIONS = {
   login: 'Login', logout: 'Logout', login_falhou: 'Login recusado', criar: 'Criação', editar: 'Edição', excluir: 'Exclusão',
   alterar_status: 'Mudança de status', finalizar: 'Conclusão', cancelar: 'Cancelamento', registrar_atividade: 'Atividade',
   corrigir_registro: 'Correção de registro', remover_registro: 'Remoção de registro', adicionar_item: 'Item adicionado',
   concluir_item: 'Item realizado', remover_item: 'Item removido', redefinir_senha: 'Senha redefinida', alterar_senha: 'Senha alterada',
-  alterar_marca: 'Nome/logo alterados', gerar_backup: 'Backup gerado', baixar_backup: 'Backup baixado', transferir_proprietario: 'Troca de proprietário',
+  alterar_marca: 'Nome/logo alterados', pular_marca: 'Configuração inicial dispensada', gerar_backup: 'Backup gerado', baixar_backup: 'Backup baixado', transferir_proprietario: 'Troca de proprietário',
 };
 const ENTITIES = { auth: 'Acesso', users: 'Funcionário', customers: 'Cliente', motorcycles: 'Motocicleta', work_orders: 'Comanda', work_order_updates: 'Histórico', backups: 'Backup', settings: 'Configurações' };
-const MAX_SIDE = 512;
-const MAX_BYTES = 512 * 1024;
-
-// Redimensiona no navegador (lado maior até 512 px) e reencoda: o servidor recebe sempre um arquivo pequeno
-// e limpo (sem metadados). PNG preserva transparência; se ficar grande demais, cai para JPEG.
-function prepareLogo(file) {
-  return new Promise((resolve, reject) => {
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { reject(new Error('Escolha uma imagem PNG, JPG ou WEBP.')); return; }
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('O arquivo não parece ser uma imagem válida.'));
-      img.onload = () => {
-        const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
-        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        let url = canvas.toDataURL('image/png');
-        if (url.length * 0.75 > MAX_BYTES) {
-          const flat = document.createElement('canvas');
-          flat.width = canvas.width; flat.height = canvas.height;
-          const g = flat.getContext('2d');
-          g.fillStyle = '#fff'; g.fillRect(0, 0, flat.width, flat.height); g.drawImage(canvas, 0, 0);
-          url = flat.toDataURL('image/jpeg', 0.88);
-        }
-        if (url.length * 0.75 > MAX_BYTES) { reject(new Error('Imagem muito grande mesmo após reduzir. Use um arquivo mais simples.')); return; }
-        resolve(url);
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 export async function render(el, _params, ctx) {
   el.innerHTML = `
     <div class="page-head"><h1>Administração</h1></div>

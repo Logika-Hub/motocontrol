@@ -14,6 +14,7 @@ const routes = [
   { path: /^\/usuarios$/, page: 'users', perm: 'users:manage' },
   { path: /^\/administracao$/, page: 'admin', perm: 'backups:manage' },
   { path: /^\/senha$/, page: 'password' },
+  { path: /^\/configurar-oficina$/, page: 'setupShop', perm: 'settings:manage' },
 ];
 
 const NAV = [
@@ -89,6 +90,10 @@ async function render() {
   }
   let path = currentPath();
   if (ctx.user.mustChangePassword && path !== '/senha') { ctx.navigate('/senha'); return; }
+  // Primeiro acesso do admin: pede nome/logo uma única vez (salvar ou pular marca como feito no servidor).
+  if (ctx.can('settings:manage') && ctx.brand && ctx.brand.configured === false && path !== '/configurar-oficina') {
+    ctx.navigate('/configurar-oficina'); return;
+  }
   if (path === '/' && !ctx.can('dashboard:read')) path = '/comandas';
 
   const route = routes.find((r) => r.path.test(path));

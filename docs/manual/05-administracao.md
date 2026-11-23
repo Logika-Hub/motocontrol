@@ -28,7 +28,7 @@ Clique em **Redefinir senha**, digite uma senha provisória e informe ao funcion
 
 ## Identidade da oficina
 
-Menu **Administração** → **Identidade da oficina**. Aqui você coloca o **nome** e a **logo** da sua oficina. Eles passam a aparecer no lugar do MotoControl na barra do topo, na tela de entrada e no cabeçalho da comanda impressa.
+Na primeira vez que o administrador entra no sistema, uma tela de boas-vindas já pede esses dados (pode ser pulada). Para alterar depois: menu **Administração** → **Identidade da oficina**. Aqui você coloca o **nome** e a **logo** da sua oficina. Eles passam a aparecer no lugar do MotoControl na barra do topo, na tela de entrada e no cabeçalho da comanda impressa.
 
 - **Logo:** escolha um arquivo **PNG, JPG ou WEBP**. O sistema reduz a imagem automaticamente; prefira uma logo larga (horizontal) e com fundo branco ou transparente. SVG não é aceito.
 - **Remover logo:** volta a aparecer o ícone do MotoControl. O nome pode ser apagado da mesma forma (deixe o campo vazio e salve).

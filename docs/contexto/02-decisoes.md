@@ -75,3 +75,8 @@ Cada decisão registra **o que** foi escolhido, **por quê** e **o que se abriu 
 **Decisão:** tabela `shop_settings` de linha única (migration 002) com nome e logo (`BYTEA`, até 512 KB, PNG/JPEG/WEBP verificados pelos bytes). Leitura pública em `/marca` (a tela de entrada precisa dela antes do login); alteração só por admin em `PUT /api/admin/branding`, auditada.
 **Por quê:** no banco, a logo entra no backup e sobrevive a reinstalação/atualização — arquivo em pasta seria esquecido. O navegador redimensiona antes de enviar, então não há dependência de biblioteca de imagem no servidor.
 **SVG recusado:** pode conter script; aceitá-lo exigiria sanitização. O crédito "MotoControl" continua discreto no login e na impressão.
+
+### D17 — Configuração de nome/logo no primeiro acesso do admin
+**Decisão:** coluna `shop_settings.setup_done_at` (migration 003). Enquanto for nula, o roteador do front leva quem tem `settings:manage` para `#/configurar-oficina`, logo depois da troca de senha obrigatória. Salvar (`PUT /api/admin/branding`) ou pular (`POST /api/admin/branding/skip`, auditado como `pular_marca`) preenche a coluna.
+**Por quê:** sem isso, a maioria das oficinas nunca descobriria a opção em Administração. "Pular" precisa ficar gravado no servidor — guardado só no navegador, a tela voltaria a cada computador/login. Instalações que já tinham nome ou logo foram marcadas como configuradas na própria migration; as demais verão a tela uma vez.
+**Limite:** o redirecionamento é só do front (é conveniência, não regra de segurança); a API não bloqueia nada enquanto a configuração está pendente.

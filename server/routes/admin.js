@@ -43,6 +43,16 @@ router.put('/branding', requirePermission('settings:manage'), async (req, res, n
   } catch (err) { next(err); }
 });
 
+// Primeiro acesso: o admin dispensou a configuração de nome/logo (pode fazer depois em Administração).
+router.post('/branding/skip', requirePermission('settings:manage'), async (req, res, next) => {
+  try {
+    if (await branding.skipSetup()) {
+      await audit(null, { userId: req.user.id, action: 'pular_marca', entity: 'settings', ip: req.ip });
+    }
+    res.json(await branding.getBranding());
+  } catch (err) { next(err); }
+});
+
 router.get('/backups', requirePermission('backups:manage'), (_req, res) => res.json(backup.listBackups()));
 
 router.post('/backups', requirePermission('backups:manage'), async (req, res, next) => {

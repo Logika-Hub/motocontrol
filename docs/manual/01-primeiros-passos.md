@@ -18,6 +18,7 @@ Cada funcionário tem **o próprio usuário e senha**. Isso é o que permite ao 
 1. Digite o **usuário** e a **senha** fornecidos pelo administrador.
 2. Clique em **Entrar**.
 3. No primeiro acesso, o sistema pede que você **crie uma senha nova** (mínimo de 6 caracteres).
+4. **Só para o administrador, uma única vez:** depois da senha, aparece a tela **Bem-vindo ao MotoControl**, pedindo o nome e a logo da oficina. Preencha e clique em **Salvar e continuar**, ou em **Pular por enquanto** — dá para fazer depois em [Administração](05-administracao.md#identidade-da-oficina). Essa tela não volta a aparecer.
 
 Errou a senha 5 vezes seguidas? O acesso fica bloqueado por 5 minutos. Esqueceu a senha? Peça ao administrador para redefini-la (veja [Administração](05-administracao.md#redefinir-a-senha-de-alguém)).
 
