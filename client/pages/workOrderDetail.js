@@ -44,8 +44,8 @@ export async function render(el, [id], ctx) {
 
     el.innerHTML = html`
       <div class="print-only print-header">
-        <div><b>MotoControl</b><span>Ordem de serviço</span></div>
-        <div class="right">Emitida em ${fmtDateTime(new Date())}<br>por ${ctx.user.name}</div>
+        <div class="print-brand">${ctx.brand && ctx.brand.hasLogo ? raw(html`<img class="print-logo" src="/marca/logo?v=${ctx.brand.version}" alt="">`) : ''}<div><b>${(ctx.brand && ctx.brand.name) || 'MotoControl'}</b><span>Ordem de serviço</span></div></div>
+        <div class="right">Emitida em ${fmtDateTime(new Date())}<br>por ${ctx.user.name}${ctx.brand && (ctx.brand.name || ctx.brand.hasLogo) ? raw('<br><small class="print-credit">MotoControl</small>') : ''}</div>
       </div>
       <div class="page-head">
         <div><a class="back" href="#/comandas">‹ Comandas</a>

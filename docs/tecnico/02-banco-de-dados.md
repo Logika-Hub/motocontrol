@@ -1,6 +1,6 @@
 # Banco de dados
 
-PostgreSQL 14+. Estrutura definida em [`database/migrations/001_initial_schema.sql`](../../database/migrations/001_initial_schema.sql).
+PostgreSQL 14+. Estrutura definida em [`database/migrations/001_initial_schema.sql`](../../database/migrations/001_initial_schema.sql); [`002_shop_settings.sql`](../../database/migrations/002_shop_settings.sql) acrescenta a identidade da oficina.
 
 ## Diagrama
 
@@ -14,6 +14,7 @@ PostgreSQL 14+. Estrutura definida em [`database/migrations/001_initial_schema.s
                                                        ▲              │ corrects_update_id
                                                        └──────────────┘
  audit_logs   (user_id opcional; registra operações de todo o sistema)
+ shop_settings (linha única: nome e logo)
  user_sessions (sessões de login)      schema_migrations (controle de migrations)
 ```
 
@@ -29,6 +30,7 @@ PostgreSQL 14+. Estrutura definida em [`database/migrations/001_initial_schema.s
 | `work_order_items` | Serviços e peças | `kind` (`servico`/`peca`), `status` (`solicitado`/`realizado`), `performed_by`, `removed_at` |
 | `work_order_updates` | Linha do tempo | `type`, `description`, `from_status`/`to_status`, `corrects_update_id`, `metadata` (JSONB), `removed_*` |
 | `audit_logs` | Auditoria | `action`, `entity`, `entity_id`, `details` (JSONB), `ip` |
+| `shop_settings` | Nome e logo da oficina | Linha única (`id = 1`); `logo` `BYTEA` + `logo_mime` (png/jpeg/webp), ambos nulos ou ambos preenchidos |
 | `user_sessions` | Sessões | Usada por `connect-pg-simple` |
 | `schema_migrations` | Migrations aplicadas | Criada por `migrate.js` |
 

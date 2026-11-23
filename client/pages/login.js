@@ -1,12 +1,14 @@
 import { api } from '../scripts/api.js';
-import { formData } from '../scripts/ui.js';
+import { formData, html, raw } from '../scripts/ui.js';
+import { brandMark } from '../scripts/brand.js';
 
-export function renderLogin(root, onLogin) {
-  root.innerHTML = `
+export function renderLogin(root, brand, onLogin) {
+  const custom = brand && (brand.name || brand.hasLogo);
+  root.innerHTML = html`
     <div class="login-wrap">
       <form class="login card" novalidate>
-        <div class="login-brand"><img src="/favicon.svg" alt=""><h1>MotoControl</h1></div>
-        <p class="muted">Gerenciamento da oficina</p>
+        <div class="login-brand ${brand && brand.hasLogo ? 'has-logo' : ''}">${raw(brandMark(brand, { withName: !!(brand && brand.name), cls: 'login-logo' }))}</div>
+        <p class="muted">${custom ? 'Gerenciamento da oficina · MotoControl' : 'Gerenciamento da oficina'}</p>
         <label class="field"><span>Usuário</span><input name="username" autocomplete="username" autocapitalize="none" required></label>
         <label class="field"><span>Senha</span><input name="password" type="password" autocomplete="current-password" required></label>
         <p class="form-error" hidden></p>

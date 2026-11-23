@@ -1,5 +1,6 @@
 import { api, setUnauthorizedHandler } from './api.js';
 import { html, raw, esc, showError } from './ui.js';
+import { loadBrand, brandMark } from './brand.js';
 
 const routes = [
   { path: /^\/$/, page: 'dashboard', perm: 'dashboard:read' },
@@ -26,12 +27,14 @@ const NAV = [
 
 const ctx = {
   user: null,
+  brand: null,
   can(perm) {
     const p = this.user ? this.user.permissions : [];
     return p.includes('*') || p.includes(perm);
   },
   navigate(path) { location.hash = `#${path}`; },
   refresh() { render(); },
+  async reloadBrand() { this.brand = await loadBrand(true); render(); },
 };
 
 const root = document.getElementById('app');
@@ -50,7 +53,7 @@ function layout() {
   const u = ctx.user;
   root.innerHTML = html`
     <header class="topbar">
-      <a class="brand" href="#/"><img src="/favicon.svg" alt=""> MotoControl</a>
+      <a class="brand" href="#/" title="MotoControl">${raw(brandMark(ctx.brand, { withName: !!(ctx.brand && ctx.brand.name) }))}</a>
       <button class="icon-btn menu-toggle" aria-label="Menu" data-menu>☰</button>
       <nav class="nav">
         ${NAV.filter((n) => ctx.can(n.perm)).map((n) => raw(html`<a href="${n.href}" class="${n.match.test(path) ? 'active' : ''}">${n.label}</a>`))}
@@ -75,12 +78,13 @@ function layout() {
 let renderSeq = 0;
 async function render() {
   const seq = ++renderSeq;
+  if (!ctx.brand) ctx.brand = await loadBrand();
   if (!ctx.user) {
     try {
       ctx.user = (await api.get('/auth/me')).user;
     } catch {
       const { renderLogin } = await import('../pages/login.js');
-      return renderLogin(root, async (user) => { ctx.user = user; render(); });
+      return renderLogin(root, ctx.brand, async (user) => { ctx.user = user; render(); });
     }
   }
   let path = currentPath();

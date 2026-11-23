@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../config/db');
 const { requirePermission } = require('../middlewares/auth');
 const backup = require('../services/backup');
+const branding = require('../services/branding');
 const { audit } = require('../services/audit');
 const { notFound } = require('../lib/errors');
 const { pagination, optStr } = require('../lib/validation');
@@ -30,6 +31,15 @@ router.get('/audit', requirePermission('audit:read'), async (req, res, next) => 
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY a.created_at DESC, a.id DESC LIMIT ${limit} OFFSET ${offset}`, params);
     res.json({ page, limit, total: rows[0] ? rows[0].total : 0, items: rows.map(({ total, ...r }) => r) });
+  } catch (err) { next(err); }
+});
+
+// Nome e logo da oficina. Leitura pública em /marca (a tela de entrada precisa dela).
+router.put('/branding', requirePermission('settings:manage'), async (req, res, next) => {
+  try {
+    const { branding: result, changes } = await branding.updateBranding(req.body || {}, req.user.id);
+    await audit(null, { userId: req.user.id, action: 'alterar_marca', entity: 'settings', details: changes, ip: req.ip });
+    res.json(result);
   } catch (err) { next(err); }
 });
 

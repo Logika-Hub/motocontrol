@@ -3,7 +3,7 @@
  * Verificada no back-end em todas as rotas; a interface apenas reflete esta matriz.
  */
 const PERMISSIONS = {
-  admin: ['*'],
+  admin: ['*'], // inclui permissões exclusivas: users:manage, backups:manage, settings:manage
   atendente: [
     'dashboard:read',
     'customers:read', 'customers:write',

@@ -70,3 +70,8 @@ Cada decisão registra **o que** foi escolhido, **por quê** e **o que se abriu 
 ### D15 — Licença proprietária
 **Decisão:** MIT substituída por "todos os direitos reservados" (`LICENSE`). Dependências de terceiros são MIT/ISC/BSD — compatíveis com uso comercial.
 **Pendente:** contrato de licença de uso com cada oficina (prazo, suporte, LGPD) — tarefa jurídica, fora do código.
+
+### D16 — Nome e logo da oficina guardados no banco
+**Decisão:** tabela `shop_settings` de linha única (migration 002) com nome e logo (`BYTEA`, até 512 KB, PNG/JPEG/WEBP verificados pelos bytes). Leitura pública em `/marca` (a tela de entrada precisa dela antes do login); alteração só por admin em `PUT /api/admin/branding`, auditada.
+**Por quê:** no banco, a logo entra no backup e sobrevive a reinstalação/atualização — arquivo em pasta seria esquecido. O navegador redimensiona antes de enviar, então não há dependência de biblioteca de imagem no servidor.
+**SVG recusado:** pode conter script; aceitá-lo exigiria sanitização. O crédito "MotoControl" continua discreto no login e na impressão.

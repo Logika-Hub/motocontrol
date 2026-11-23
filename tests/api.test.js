@@ -198,3 +198,43 @@ test('manual do usuário é servido em /ajuda sem login', async () => {
   assert.equal((await request(app).get('/ajuda/99-inexistente')).status, 404);
   assert.equal((await request(app).get('/ajuda/..%2f..%2fpackage')).status, 404);
 });
+
+test('identidade da oficina: só admin altera, logo é validada pelos bytes e servida sem login', async () => {
+  // PNG 1x1 válido
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  const dataUrl = `data:image/png;base64,${png.toString('base64')}`;
+
+  const inicial = await request(app).get('/marca');
+  assert.equal(inicial.status, 200);
+  assert.deepEqual([inicial.body.name, inicial.body.hasLogo], [null, false]);
+  assert.equal((await request(app).get('/marca/logo')).status, 404);
+
+  assert.equal((await joao.put('/api/admin/branding').send({ name: 'X' })).status, 403);
+  assert.equal((await request(app).put('/api/admin/branding').send({ name: 'X' })).status, 401);
+  const svg = `data:image/png;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>').toString('base64')}`;
+  assert.equal((await admin.put('/api/admin/branding').send({ name: 'X', logo: svg })).status, 400);
+  assert.equal((await admin.put('/api/admin/branding').send({ name: 'X', logo: 'data:image/svg+xml;base64,PHN2Zy8+' })).status, 400);
+  assert.equal((await admin.put('/api/admin/branding').send({ name: 'x'.repeat(81) })).status, 400);
+  const grande = `data:image/png;base64,${Buffer.concat([png, Buffer.alloc(600 * 1024)]).toString('base64')}`;
+  assert.equal((await admin.put('/api/admin/branding').send({ name: 'X', logo: grande })).status, 400);
+
+  const ok = await admin.put('/api/admin/branding').send({ name: '  Moto Peças do Zé ', logo: dataUrl });
+  assert.equal(ok.status, 200);
+  assert.deepEqual([ok.body.name, ok.body.hasLogo], ['Moto Peças do Zé', true]);
+  const logo = await request(app).get('/marca/logo');
+  assert.equal(logo.status, 200);
+  assert.equal(logo.headers['content-type'], 'image/png');
+  assert.equal(logo.headers['x-content-type-options'], 'nosniff');
+  assert.ok(Buffer.from(logo.body).equals(png));
+  assert.equal((await request(app).get('/marca/logo').set('If-None-Match', logo.headers.etag)).status, 304);
+
+  // Trocar só o nome mantém a logo; logo: null remove.
+  assert.equal((await admin.put('/api/admin/branding').send({ name: 'Oficina do Zé' })).body.hasLogo, true);
+  const rem = await admin.put('/api/admin/branding').send({ name: 'Oficina do Zé', logo: null });
+  assert.equal(rem.body.hasLogo, false);
+  assert.equal((await request(app).get('/marca/logo')).status, 404);
+
+  const { rows } = await pool.query("SELECT details FROM audit_logs WHERE action = 'alterar_marca' ORDER BY id");
+  assert.equal(rows.length, 3);
+  assert.equal(rows[2].details.logo, 'removida');
+});

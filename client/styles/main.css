@@ -24,6 +24,8 @@ code { background: #f1f2f4; padding: 1px 5px; border-radius: 4px; font-size: .88
 .brand { color: #fff; font-weight: 700; display: flex; align-items: center; gap: .5rem; font-size: 1.1rem; }
 .brand img { width: 28px; height: 28px; }
 .brand:hover { text-decoration: none; }
+.brand .shop-logo { width: auto; height: 32px; max-width: 160px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px; }
+.brand .brand-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16rem; }
 .nav { display: flex; gap: .25rem; flex: 1; }
 .nav a { color: #cfd5de; padding: .45rem .75rem; border-radius: 6px; }
 .nav a:hover { background: rgba(255,255,255,.08); text-decoration: none; color: #fff; }
@@ -164,6 +166,10 @@ h1 .badge { font-size: .8rem; }
 .login { width: 100%; max-width: 360px; padding: 2rem; }
 .login-brand { display: flex; align-items: center; gap: .6rem; }
 .login-brand img { width: 40px; height: 40px; }
+.login-brand .brand-name { font-size: 1.6rem; font-weight: 700; }
+.login-brand.has-logo { flex-direction: column; text-align: center; }
+.login-brand.has-logo img { width: auto; height: auto; max-width: 100%; max-height: 120px; object-fit: contain; }
+.login-brand.has-logo + .muted { text-align: center; }
 .login .muted { margin: .3rem 0 1.4rem; }
 .login-help { font-size: .82rem; color: var(--muted); text-align: center; margin: 1rem 0 0; }
 
@@ -217,6 +223,9 @@ h1 .badge { font-size: .8rem; }
   .print-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 3mm; margin-bottom: 5mm; font-size: 9pt; }
   .print-header b { font-size: 13pt; display: block; }
   .print-header span { text-transform: uppercase; letter-spacing: .08em; color: #444; }
+  .print-brand { display: flex; align-items: center; gap: 4mm; }
+  .print-logo { max-height: 16mm; max-width: 45mm; object-fit: contain; }
+  .print-credit { color: #777; font-size: 7pt; }
   .page-head { margin-bottom: 4mm; }
   h1 { font-size: 18pt; }
   h2 { font-size: 11pt; margin-bottom: 2.5mm; break-after: avoid; }
@@ -247,3 +256,8 @@ h1 .badge { font-size: .8rem; }
   .signature-lines > div { flex: 1; }
   .signatures span { display: block; border-top: 1px solid #000; margin-bottom: 1.5mm; }
 }
+
+/* Identidade da oficina (Administração) */
+.brand-preview { display: flex; align-items: center; justify-content: center; min-height: 120px; border: 1px dashed #c8ced8; border-radius: 8px; padding: .75rem; background: #fafbfc; margin-bottom: .75rem; }
+.brand-preview img { max-height: 110px; max-width: 100%; object-fit: contain; }
+.brand-actions { display: flex; gap: .5rem; flex-wrap: wrap; }

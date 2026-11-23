@@ -26,6 +26,15 @@ Clique em **Redefinir senha**, digite uma senha provisória e informe ao funcion
 
 > Você não pode desativar nem tirar o perfil de administrador da sua própria conta. Mantenha sempre **pelo menos dois administradores** — se o único esquecer a senha, só o suporte técnico consegue recuperar o acesso.
 
+## Identidade da oficina
+
+Menu **Administração** → **Identidade da oficina**. Aqui você coloca o **nome** e a **logo** da sua oficina. Eles passam a aparecer no lugar do MotoControl na barra do topo, na tela de entrada e no cabeçalho da comanda impressa.
+
+- **Logo:** escolha um arquivo **PNG, JPG ou WEBP**. O sistema reduz a imagem automaticamente; prefira uma logo larga (horizontal) e com fundo branco ou transparente. SVG não é aceito.
+- **Remover logo:** volta a aparecer o ícone do MotoControl. O nome pode ser apagado da mesma forma (deixe o campo vazio e salve).
+
+A logo fica guardada no banco de dados, então entra nos backups junto com o resto. Só administradores podem alterá-la, e cada alteração fica na auditoria.
+
 ## Auditoria
 
 Menu **Administração** → **Auditoria**. Registra as operações importantes: entradas e tentativas de entrada recusadas, cadastros, edições, exclusões, mudanças de situação, cancelamentos, remoções de registros, redefinições de senha e backups — sempre com funcionário, data e computador (IP).

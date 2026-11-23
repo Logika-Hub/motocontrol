@@ -96,6 +96,14 @@ Todas as ações de comanda devolvem a comanda completa atualizada.
 | GET | `/admin/audit?entity=&userId=` | `audit:read` |
 | GET / POST | `/admin/backups` (listar / gerar) | `backups:manage` |
 | GET | `/admin/backups/:arquivo` (download) | `backups:manage` |
+| PUT | `/admin/branding` `{name, logo?}` — `logo`: data URL PNG/JPEG/WEBP (≤ 512 KB), `null` remove, ausente mantém | `settings:manage` (só admin) |
+
+### Identidade da oficina (pública, fora de `/api`)
+
+| Método | Rota | Resposta |
+|---|---|---|
+| GET | `/marca` | `{name, hasLogo, version}` |
+| GET | `/marca/logo` | A imagem (com `ETag`; 404 se não houver logo) |
 
 ## Exemplo com `curl`
 
