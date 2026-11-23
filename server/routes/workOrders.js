@@ -1,6 +1,7 @@
 const express = require('express');
 const { requirePermission } = require('../middlewares/auth');
 const svc = require('../services/workOrders');
+const tickets = require('../services/tickets');
 const { badRequest } = require('../lib/errors');
 const { str, optStr, optInt, optDate, idParam, pagination } = require('../lib/validation');
 
@@ -106,6 +107,16 @@ router.delete('/:id/items/:itemId', requirePermission('work_orders:items'), wrap
   const id = idParam(req.params.id);
   await svc.removeItem(req.user, id, idParam(req.params.itemId), req.ip);
   res.json(await svc.getDetail(id));
+}));
+
+// Chamados da comanda (D18). Ler é de quem lê a comanda; abrir exige tickets:use.
+router.get('/:id/tickets', requirePermission('work_orders:read'), wrap(async (req, res) => {
+  res.json({ data: await tickets.listForOrder(req.user, idParam(req.params.id)) });
+}));
+
+router.post('/:id/tickets', requirePermission('tickets:use'), wrap(async (req, res) => {
+  const ticketId = await tickets.open(req.user, idParam(req.params.id), { body: req.body.body }, req.ip);
+  res.status(201).json(await tickets.getDetail(req.user, ticketId));
 }));
 
 module.exports = router;

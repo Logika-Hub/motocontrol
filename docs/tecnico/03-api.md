@@ -79,6 +79,19 @@ Permissão: ver [`server/config/permissions.js`](../../server/config/permissions
 
 Todas as ações de comanda devolvem a comanda completa atualizada.
 
+### Chamados (D18)
+
+| Método | Rota | Corpo / parâmetros | Permissão |
+|---|---|---|---|
+| GET | `/work-orders/:id/tickets` | chamados da comanda com `messages` e `unread` | `work_orders:read` |
+| POST | `/work-orders/:id/tickets` | `{body}` (≤ 2000) — só comanda em andamento; destino definido pelo perfil de quem abre | `tickets:use` |
+| GET | `/tickets` | `?status=aberto\|encerrado\|todos&page=&limit=` → `{data, page, limit}`; só os do lado do usuário, os que abriu e os em que escreveu | `tickets:use` |
+| GET | `/tickets/summary` | `{open, unread_tickets, unread}` — usado pelo contador do menu | `tickets:use` |
+| GET | `/tickets/:tid` | chamado com `messages` | `tickets:use` |
+| POST | `/tickets/:tid/messages` | `{body}` — 409 se encerrado | `tickets:use` |
+| POST | `/tickets/:tid/close` | `{summary}` (≤ 1000) — grava registro `chamado` na linha do tempo | `tickets:use` |
+| POST | `/tickets/:tid/read` | marca como lido até a última mensagem (204) | `tickets:use` |
+
 ### Funcionários
 
 | Método | Rota | Corpo | Permissão |

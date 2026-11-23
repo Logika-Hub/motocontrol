@@ -238,6 +238,7 @@ async function finish(user, id, { version, closingNotes }, ip) {
     await addUpdate(db, id, user.id, 'finalizacao', `Comanda concluída.${closingNotes ? ` ${closingNotes}` : ''}`,
       { fromStatus: wo.status, toStatus: 'concluida' });
     await audit(db, { userId: user.id, action: 'finalizar', entity: 'work_orders', entityId: id, ip });
+    await require('./tickets').autoCloseForOrder(db, user, id, 'Comanda concluída.', ip); // D18
     return updated;
   });
 }
@@ -252,6 +253,7 @@ async function cancel(user, id, { version, reason }, ip) {
     await addUpdate(db, id, user.id, 'cancelamento', `Comanda cancelada. Justificativa: ${reason}`,
       { fromStatus: wo.status, toStatus: 'cancelada' });
     await audit(db, { userId: user.id, action: 'cancelar', entity: 'work_orders', entityId: id, details: { reason }, ip });
+    await require('./tickets').autoCloseForOrder(db, user, id, 'Comanda cancelada.', ip); // D18
     return updated;
   });
 }
@@ -353,4 +355,6 @@ module.exports = {
   STATUS, ACTIVE_STATUSES, formatNumber, parseNumber,
   create, getDetail, search, editFields, changeStatus, finish, cancel,
   addManualUpdate, correctUpdate, removeUpdate, addItem, markItemDone, removeItem,
+  // usados por services/tickets.js
+  lockOrder, addUpdate, FINAL_STATUSES,
 };

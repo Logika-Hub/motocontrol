@@ -10,7 +10,7 @@ O MotoControl organiza o dia a dia da oficina em torno da **comanda** (ordem de 
 |---|---|
 | **Qualquer funcionário** | [Primeiros passos](01-primeiros-passos.md) — entrar no sistema, trocar a senha, navegar |
 | **Atendente** | [Comandas](02-comandas.md) (abrir uma comanda) e [Clientes e motocicletas](03-clientes-e-motos.md) |
-| **Mecânico** | [Comandas](02-comandas.md) — registrar diagnóstico, serviços e peças |
+| **Mecânico** | [Comandas](02-comandas.md) — registrar diagnóstico, serviços e peças — e [Chamados](08-chamados.md) para tirar dúvidas com o balcão |
 | **Dono / gerente** | [Consultas e histórico](04-consultas-e-historico.md) e [Administração](05-administracao.md) |
 | **Quem cuida do computador servidor** | [Servidor, backup e atualização](06-servidor-e-backup.md) |
 
@@ -36,3 +36,4 @@ A qualquer momento antes de concluir, a comanda pode ser **cancelada** (com just
 5. [Administração: funcionários, auditoria e backups](05-administracao.md)
 6. [Servidor, backup e atualização](06-servidor-e-backup.md)
 7. [Perguntas frequentes](07-perguntas-frequentes.md)
+8. [Chamados: tirar dúvidas sobre uma moto](08-chamados.md)

@@ -11,6 +11,7 @@ const routes = [
   { path: /^\/clientes\/(\d+)$/, page: 'customerDetail', perm: 'customers:read' },
   { path: /^\/motos$/, page: 'motorcycles', perm: 'motorcycles:read' },
   { path: /^\/motos\/(\d+)$/, page: 'motorcycleDetail', perm: 'motorcycles:read' },
+  { path: /^\/chamados$/, page: 'tickets', perm: 'tickets:use' },
   { path: /^\/usuarios$/, page: 'users', perm: 'users:manage' },
   { path: /^\/administracao$/, page: 'admin', perm: 'backups:manage' },
   { path: /^\/senha$/, page: 'password' },
@@ -20,6 +21,7 @@ const routes = [
 const NAV = [
   { href: '#/', label: 'Dashboard', perm: 'dashboard:read', match: /^\/$/ },
   { href: '#/comandas', label: 'Comandas', perm: 'work_orders:read', match: /^\/comandas/ },
+  { href: '#/chamados', label: 'Chamados', perm: 'tickets:use', match: /^\/chamados/, badge: true },
   { href: '#/clientes', label: 'Clientes', perm: 'customers:read', match: /^\/clientes/ },
   { href: '#/motos', label: 'Motocicletas', perm: 'motorcycles:read', match: /^\/motos/ },
   { href: '#/usuarios', label: 'Funcionários', perm: 'users:manage', match: /^\/usuarios/ },
@@ -57,7 +59,7 @@ function layout() {
       <a class="brand" href="#/" title="MotoControl">${raw(brandMark(ctx.brand, { withName: !!(ctx.brand && ctx.brand.name) }))}</a>
       <button class="icon-btn menu-toggle" aria-label="Menu" data-menu>☰</button>
       <nav class="nav">
-        ${NAV.filter((n) => ctx.can(n.perm)).map((n) => raw(html`<a href="${n.href}" class="${n.match.test(path) ? 'active' : ''}">${n.label}</a>`))}
+        ${NAV.filter((n) => ctx.can(n.perm)).map((n) => raw(html`<a href="${n.href}" class="${n.match.test(path) ? 'active' : ''}">${n.label}${n.badge ? raw('<span class="nav-badge" data-ticket-badge hidden></span>') : ''}</a>`))}
       </nav>
       <div class="user-menu">
         <span class="user-name">${u.name}<small>${u.roleName}</small></span>
@@ -73,8 +75,27 @@ function layout() {
     if (location.hash && location.hash !== "#/") location.hash = "#/"; else render();
   });
   root.querySelector('[data-menu]').addEventListener('click', () => root.querySelector('.topbar').classList.toggle('open'));
+  refreshTicketBadge();
   return root.querySelector('#page');
 }
+
+// Aviso de chamados (D18): contador de mensagens não lidas no menu, por consulta periódica (sem push na rede local).
+const BADGE_MS = 20000;
+let badgeBusy = false;
+async function refreshTicketBadge() {
+  if (!ctx.user || !ctx.can('tickets:use') || badgeBusy) return;
+  badgeBusy = true;
+  try {
+    const s = await api.get('/tickets/summary');
+    const b = root.querySelector('[data-ticket-badge]');
+    if (!b || !ctx.user) return;
+    b.hidden = !s.unread;
+    b.textContent = s.unread > 99 ? '99+' : String(s.unread);
+    b.title = `${s.unread} mensagem(ns) não lida(s) em ${s.unread_tickets} chamado(s)`;
+  } catch { /* sem rede ou sessão expirada: o próximo ciclo tenta de novo */ } finally { badgeBusy = false; }
+}
+setInterval(() => { if (!document.hidden) refreshTicketBadge(); }, BADGE_MS);
+window.addEventListener('tickets:changed', refreshTicketBadge);
 
 let renderSeq = 0;
 async function render() {

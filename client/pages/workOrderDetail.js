@@ -8,17 +8,24 @@ const ACTIVE = ['aberta', 'em_diagnostico', 'aguardando_pecas', 'em_execucao'];
 const TYPE_LABELS = {
   abertura: 'Abertura', status: 'Status', diagnostico: 'Diagnóstico', servico: 'Serviço', peca: 'Peça',
   observacao: 'Observação', edicao: 'Edição', correcao: 'Correção', finalizacao: 'Finalização',
-  cancelamento: 'Cancelamento', remocao: 'Remoção',
+  cancelamento: 'Cancelamento', remocao: 'Remoção', chamado: 'Chamado',
 };
+const POLL_MS = 10000;
 const MANUAL = ['observacao', 'diagnostico', 'servico', 'correcao'];
 
 export async function render(el, [id], ctx) {
-  let wo = await api.get(`/work-orders/${id}`);
+  let [wo, tickets] = await Promise.all([api.get(`/work-orders/${id}`), loadTickets()]);
+  const myHash = location.hash;
+
+  async function loadTickets() {
+    return (await api.get(`/work-orders/${id}/tickets`)).data;
+  }
 
   // Executa uma ação; em conflito de versão (outro usuário alterou), recarrega a comanda.
   async function act(fn, okMsg) {
     try {
       wo = await fn();
+      if (!ACTIVE.includes(wo.status)) tickets = await loadTickets(); // concluir/cancelar encerra os chamados
       if (okMsg) toast(okMsg);
       draw();
       return wo;
@@ -116,6 +123,8 @@ export async function render(el, [id], ctx) {
         </div>
       </div>
 
+      <section class="card no-print tickets-card" data-tickets></section>
+
       <section class="card history-card">
         <h2>Histórico de atividades</h2>
         ${open && updateTypes.length ? raw(html`
@@ -151,7 +160,149 @@ export async function render(el, [id], ctx) {
     </li>`;
   }
 
+  // --- Chamados (D18): conversa da oficina com o balcão, sempre ligada a esta comanda. ---------------
+  const sig = (list) => list.map((t) => `${t.id}:${t.status}:${t.messages.length}`).join('|');
+
+  function ticketHtml(t, open) {
+    const canWrite = open && t.status === 'aberto' && ctx.can('tickets:use');
+    return html`<article class="ticket ticket-${t.status}" data-ticket="${t.id}">
+      <header class="ticket-head">
+        <b>Chamado #${t.id}</b>
+        <span class="tag">para ${t.target_label}</span>
+        <span class="badge ${t.status === 'aberto' ? 'status-aberta' : ''}">${t.status === 'aberto' ? 'Aberto' : 'Encerrado'}</span>
+        <span class="muted small">aberto por ${t.opened_by_name} (${t.opened_by_role}) em ${fmtDateTime(t.created_at)}</span>
+      </header>
+      <ol class="chat">${t.messages.map((m) => raw(html`<li class="${m.user_id === ctx.user.id ? 'mine' : ''}">
+        <div class="chat-meta"><b>${m.user_name}</b> <span class="muted">(${m.user_role})</span> <time>${fmtDateTime(m.created_at)}</time></div>
+        <div class="chat-text pre">${m.body}</div>
+      </li>`))}</ol>
+      ${t.status === 'encerrado' ? raw(html`<p class="ticket-summary"><b>${t.auto_closed ? 'Encerrado automaticamente' : `Encerrado por ${t.closed_by_name}`}</b>
+        em ${fmtDateTime(t.closed_at)}${t.summary ? raw(html` — ${t.summary}`) : ''}</p>`) : ''}
+      ${canWrite ? raw(html`<form class="chat-form" data-reply="${t.id}">
+        <textarea name="body" rows="2" maxlength="2000" placeholder="Escreva uma resposta…" required></textarea>
+        <div class="chat-actions">
+          <button class="btn btn-primary btn-sm" type="submit">Enviar</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-close-ticket="${t.id}">Encerrar chamado</button>
+        </div>
+      </form>`) : ''}
+    </article>`;
+  }
+
+  function drawTickets() {
+    const box = el.querySelector('[data-tickets]');
+    if (!box) return;
+    const open = ACTIVE.includes(wo.status);
+    // Preserva o que estiver sendo digitado quando o polling redesenha a seção.
+    const drafts = {};
+    box.querySelectorAll('[data-reply], [data-new-ticket]').forEach((f) => { drafts[f.dataset.reply || 'new'] = f.body.value; });
+    const focused = document.activeElement && box.contains(document.activeElement)
+      ? (document.activeElement.form && (document.activeElement.form.dataset.reply || 'new')) : null;
+    const canOpen = open && ctx.can('tickets:use');
+    const target = ctx.user.role === 'mecanico' ? 'o balcão (atendentes e administrador)' : 'a oficina (mecânicos)';
+    box.innerHTML = html`
+      <div class="card-head"><h2>Chamados</h2>
+        ${canOpen ? raw('<button class="btn btn-ghost btn-sm" data-open-ticket>+ Abrir chamado</button>') : ''}</div>
+      <form class="chat-form new-ticket" data-new-ticket hidden>
+        <p class="muted small">A mensagem vai para ${target}. Quem responder aparece com nome e horário.</p>
+        <textarea name="body" rows="3" maxlength="2000" placeholder="Qual é a dúvida?" required></textarea>
+        <div class="chat-actions">
+          <button class="btn btn-primary btn-sm" type="submit">Abrir chamado</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-cancel-new>Cancelar</button>
+        </div>
+      </form>
+      ${tickets.length ? raw(tickets.slice().reverse().map((t) => ticketHtml(t, open)).join(''))
+    : raw('<p class="empty">Nenhum chamado nesta comanda.</p>')}`;
+    box.querySelectorAll('[data-reply], [data-new-ticket]').forEach((f) => {
+      const k = f.dataset.reply || 'new';
+      if (drafts[k]) { f.body.value = drafts[k]; if (k === 'new') f.hidden = false; }
+      if (focused === k) { f.hidden = false; f.body.focus(); }
+    });
+    bindTickets(box);
+    markRead();
+  }
+
+  // Marca como lidas as mensagens dos chamados abertos que têm algo novo para este usuário.
+  function markRead() {
+    if (!ctx.can('tickets:use')) return;
+    tickets.filter((t) => t.status === 'aberto' && t.unread > 0).forEach((t) => {
+      t.unread = 0;
+      api.post(`/tickets/${t.id}/read`).then(() => window.dispatchEvent(new Event('tickets:changed'))).catch(() => {});
+    });
+  }
+
+  async function reloadTickets({ withOrder = false } = {}) {
+    if (withOrder) {
+      [wo, tickets] = await Promise.all([api.get(`/work-orders/${id}`), loadTickets()]);
+      draw();
+    } else {
+      tickets = await loadTickets();
+      drawTickets();
+    }
+  }
+
+  function bindTickets(box) {
+    const guard = (fn) => async (...a) => { try { await fn(...a); } catch (err) { showError(err); await reloadTickets({ withOrder: true }).catch(() => {}); } };
+    const newForm = box.querySelector('[data-new-ticket]');
+    const openBtn = box.querySelector('[data-open-ticket]');
+    if (openBtn) openBtn.addEventListener('click', () => { newForm.hidden = false; newForm.body.focus(); });
+    box.querySelector('[data-cancel-new]').addEventListener('click', () => { newForm.body.value = ''; newForm.hidden = true; });
+    newForm.addEventListener('submit', guard(async (e) => {
+      e.preventDefault();
+      const body = newForm.body.value.trim();
+      if (!body) return;
+      newForm.querySelector('[type=submit]').disabled = true;
+      await api.post(`/work-orders/${id}/tickets`, { body });
+      newForm.body.value = '';
+      toast('Chamado aberto.');
+      await reloadTickets();
+    }));
+    box.querySelectorAll('[data-reply]').forEach((f) => f.addEventListener('submit', guard(async (e) => {
+      e.preventDefault();
+      const body = f.body.value.trim();
+      if (!body) return;
+      f.querySelector('[type=submit]').disabled = true;
+      await api.post(`/tickets/${f.dataset.reply}/messages`, { body });
+      f.body.value = '';
+      await reloadTickets();
+    })));
+    box.querySelectorAll('[data-reply] textarea').forEach((t) => t.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) t.form.requestSubmit();
+    }));
+    box.querySelectorAll('[data-close-ticket]').forEach((b) => b.addEventListener('click', () => modal({
+      title: `Encerrar chamado #${b.dataset.closeTicket}`,
+      body: html`<p class="muted small">O resumo vai para o histórico da comanda. A conversa completa continua guardada aqui.</p>
+        ${raw(field('Resumo do que foi decidido', '<textarea name="summary" rows="3" maxlength="1000" required></textarea>', { required: true }))}`,
+      submitLabel: 'Encerrar',
+      onSubmit: async (d) => {
+        await api.post(`/tickets/${b.dataset.closeTicket}/close`, d);
+        toast('Chamado encerrado.');
+        await reloadTickets({ withOrder: true });
+        return true;
+      },
+    })));
+  }
+
+  // Polling enquanto esta tela estiver aberta; para sozinho ao sair dela.
+  const timer = setInterval(async () => {
+    if (!el.isConnected || location.hash !== myHash) { clearInterval(timer); return; }
+    if (document.hidden) return;
+    try {
+      const fresh = await loadTickets();
+      if (!el.isConnected || location.hash !== myHash) return;
+      const statusChanged = fresh.some((t) => { const old = tickets.find((x) => x.id === t.id); return old && old.status !== t.status; });
+      const changed = sig(fresh) !== sig(tickets);
+      tickets = fresh;
+      if (statusChanged) {
+        // Encerrado por outra pessoa: o resumo entrou na linha do tempo; recarrega a comanda se não houver texto pendente.
+        const pending = el.querySelector('[data-update-form] textarea');
+        if (!pending || !pending.value.trim()) { wo = await api.get(`/work-orders/${id}`); draw(); return; }
+      }
+      if (changed) drawTickets(); else markRead();
+    } catch { /* falha de rede momentânea: tenta de novo no próximo ciclo */ }
+  }, POLL_MS);
+
   function bind() {
+    drawTickets();
     const on = (sel, ev, fn) => el.querySelectorAll(sel).forEach((b) => b.addEventListener(ev, (e) => fn(e, b)));
     const guard = (fn) => async (...a) => { try { await fn(...a); } catch (err) { showError(err); draw(); } };
 

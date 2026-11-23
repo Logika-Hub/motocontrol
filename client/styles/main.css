@@ -206,6 +206,33 @@ h1 .badge { font-size: .8rem; }
 }
 
 /* Impressão da comanda (Imprimir / Salvar como PDF) */
+/* Chamados (D18) */
+.nav-badge { display: inline-block; min-width: 1.25rem; padding: 0 .35rem; margin-left: .35rem; border-radius: 999px; background: var(--danger); color: #fff; font-size: .72rem; font-weight: 700; line-height: 1.25rem; text-align: center; vertical-align: middle; }
+.nav-badge[hidden] { display: none; }
+.count-badge { display: inline-block; min-width: 1.3rem; padding: 0 .4rem; border-radius: 999px; background: var(--danger); color: #fff; font-size: .75rem; font-weight: 700; line-height: 1.3rem; text-align: center; }
+.segmented { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.ticket { border: 1px solid var(--border); border-radius: 8px; padding: .75rem; margin-top: .75rem; }
+.ticket-encerrado { background: var(--bg, #f8f9fb); }
+.ticket-encerrado .chat { opacity: .85; }
+.ticket-head { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+.chat { list-style: none; margin: 0; padding: 0; max-height: 22rem; overflow-y: auto; display: flex; flex-direction: column; gap: .45rem; }
+.chat li { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .45rem .65rem; max-width: 85%; align-self: flex-start; }
+.chat li.mine { background: var(--primary-soft); align-self: flex-end; }
+.chat-meta { font-size: .78rem; color: var(--muted); margin-bottom: .15rem; }
+.chat-text { margin: 0; word-break: break-word; }
+.chat-form { margin-top: .6rem; }
+.chat-form textarea { width: 100%; min-height: 3.5rem; }
+.chat-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; margin-top: .4rem; }
+.ticket-summary { margin: .6rem 0 0; padding: .5rem .65rem; border-left: 3px solid var(--s-ok, var(--success)); background: var(--surface); }
+.ticket-list { list-style: none; margin: 0; padding: 0; }
+.ticket-list li { border-bottom: 1px solid var(--border); }
+.ticket-list li a { display: block; padding: .65rem .25rem; color: inherit; }
+.ticket-list li a:hover { background: var(--primary-soft); text-decoration: none; }
+.ticket-list li.has-unread b { color: var(--primary); }
+.ticket-line { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.ticket-line time { margin-left: auto; }
+.ticket-last { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: .15rem; }
+
 .print-only { display: none; }
 @page {
   size: A4;
@@ -215,7 +242,7 @@ h1 .badge { font-size: .8rem; }
 @media print {
   :root { font-size: 10pt; }
   body { background: #fff; color: #000; }
-  .topbar, .actions, .back, .timeline-form, .tl-actions, .card-head .btn, #toasts, .table .btn, .modal-backdrop { display: none !important; }
+  .topbar, .actions, .back, .no-print, .timeline-form, .tl-actions, .card-head .btn, #toasts, .table .btn, .modal-backdrop { display: none !important; }
   .page { padding: 0; max-width: none; }
   a { color: inherit; }
   .print-only { display: block; }

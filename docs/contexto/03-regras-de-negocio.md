@@ -44,6 +44,7 @@ Rastreabilidade de cada regra: **onde está implementada** e **qual teste a gara
 | Login bloqueado 5 min após 5 erros | `routes/auth.js` | Força bruta |
 | Senha inicial/redefinida exige troca | `must_change_password` | Administrador não deve conhecer a senha final |
 | Admin não desativa nem rebaixa a si mesmo | `routes/users.js` | Evitar ficar sem administrador |
+| Chamado só em comanda em andamento; mensagens imutáveis; encerrar exige resumo (vai à linha do tempo); concluir/cancelar encerra os abertos | `services/tickets.js` | [D18](02-decisoes.md#d18--chamados-chat-dentro-da-comanda) |
 
 ## Fluxo de status
 
