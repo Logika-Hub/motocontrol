@@ -128,7 +128,11 @@ async function getDetail(id) {
        JOIN roles r ON r.id = us.role_id
        LEFT JOIN users ur ON ur.id = u.removed_by
       WHERE u.work_order_id = $1 ORDER BY u.created_at, u.id`, [id])).rows;
-  return { ...wo, code: formatNumber(wo.number), status_label: STATUS[wo.status], items, updates };
+  // Venda ativa (D19), se a comanda já foi fechada.
+  const { rows: [sale] } = await query(
+    `SELECT s.id, s.total, s.discount, s.closed_at, u.name AS closed_by_name
+       FROM sales s JOIN users u ON u.id = s.closed_by WHERE s.work_order_id = $1 AND s.status = 'concluida'`, [id]);
+  return { ...wo, code: formatNumber(wo.number), status_label: STATUS[wo.status], items, updates, sale: sale || null };
 }
 
 async function search(filters, { limit, offset }) {
@@ -308,16 +312,23 @@ async function removeUpdate(user, id, updateId, { reason }, ip) {
   });
 }
 
-async function addItem(user, id, { kind, description, quantity }, ip) {
+async function addItem(user, id, { kind, description, quantity, unitPrice }, ip) {
   if (!['servico', 'peca'].includes(kind)) throw badRequest('Tipo de item inválido (servico ou peca).');
   if (!description) throw badRequest('Descreva o item.');
   const qty = quantity === undefined || quantity === null || quantity === '' ? 1 : Number(quantity);
   if (!(qty > 0)) throw badRequest('Quantidade inválida.');
+  // Preço opcional aqui; pode ser informado ou corrigido no fechamento da venda.
+  let price = null;
+  if (unitPrice !== undefined && unitPrice !== null && unitPrice !== '') {
+    const cents = require('../lib/saleCalc').toCents(unitPrice, 'preço');
+    if (cents < 0) throw badRequest('O preço não pode ser negativo.');
+    price = cents / 100;
+  }
   return withTransaction(async (db) => {
     await lockOrder(db, id);
     const { rows: [item] } = await db.query(
-      `INSERT INTO work_order_items (work_order_id, kind, description, quantity, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-      [id, kind, description, qty, user.id]);
+      `INSERT INTO work_order_items (work_order_id, kind, description, quantity, unit_price, created_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [id, kind, description, qty, price, user.id]);
     const text = kind === 'peca' ? `Peça adicionada: ${description} (qtd. ${qty})` : `Serviço solicitado: ${description}`;
     await addUpdate(db, id, user.id, kind, text, { metadata: { itemId: item.id } });
     await audit(db, { userId: user.id, action: 'adicionar_item', entity: 'work_orders', entityId: id, details: { itemId: item.id, kind, description }, ip });

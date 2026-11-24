@@ -4,9 +4,9 @@ Sistema web de gestão de oficinas de motocicletas, centrado na **comanda** (ord
 
 ## Leia antes de alterar
 
-- `docs/contexto/01-visao-geral.md` — escopo do MVP (o que **não** fazer: financeiro, estoque, orçamento, nota fiscal, WhatsApp, multifilial, acesso pela internet).
+- `docs/contexto/01-visao-geral.md` — escopo do MVP (o que **não** fazer: estoque, orçamento, nota fiscal, WhatsApp, multifilial, acesso pela internet).
 - `docs/contexto/02-decisoes.md` — decisões e motivos. Não reverta uma decisão sem justificar e registrar uma nova entrada.
-- `docs/contexto/03-regras-de-negocio.md` — RN01–RN12 → código → teste.
+- `docs/contexto/03-regras-de-negocio.md` — RN01–RN21 → código → teste.
 
 ## Comandos
 

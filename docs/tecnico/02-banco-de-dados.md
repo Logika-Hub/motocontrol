@@ -34,6 +34,11 @@ PostgreSQL 14+. Estrutura definida em [`database/migrations/001_initial_schema.s
 | `work_order_tickets` | Chamados (D18) | `target` (`balcao`/`oficina`), `status` (`aberto`/`encerrado`), `opened_by`, `closed_by`/`closed_at`, `summary` (obrigatório ao encerrar), `auto_closed` |
 | `work_order_ticket_messages` | Mensagens dos chamados | `user_id`, `body` (≤ 2000), `created_at`; imutáveis |
 | `work_order_ticket_reads` | Até onde cada usuário leu | PK (`ticket_id`, `user_id`), `last_read_message_id`; base do contador de não lidas |
+| `commission_rules` | Regras de comissão (D19) | por serviço ou padrão; `type` percentual/fixo; `user_id` opcional (exceção); `ended_at` (versionamento, nunca editada) |
+| `sales` | Vendas (fechamento da comanda) | `status` `concluida`/`estornada`; índice único parcial por comanda ativa; totais, desconto, motivo e autor do estorno |
+| `sale_items` | Retrato dos itens na venda | preço, desconto, líquido, colaborador responsável e comissão no momento do fechamento |
+| `sale_payments` | Formas de pagamento | `method` (pix, dinheiro, crédito, débito), `amount`; soma = total da venda (garantida pelo serviço, na transação) |
+| `commission_payouts` | Repasses a colaboradores | `amount`, `method` (pix, dinheiro, transferência, outro), `note`, `status` ativo/cancelado, autor e dados do cancelamento (motivo obrigatório); saldo é calculado, não guardado |
 | `audit_logs` | Auditoria | `action`, `entity`, `entity_id`, `details` (JSONB), `ip` |
 | `shop_settings` | Nome e logo da oficina | Linha única (`id = 1`); `logo` `BYTEA` + `logo_mime` (png/jpeg/webp), ambos nulos ou ambos preenchidos; `setup_done_at` nulo = configuração do primeiro acesso pendente |
 | `user_sessions` | Sessões | Usada por `connect-pg-simple` |

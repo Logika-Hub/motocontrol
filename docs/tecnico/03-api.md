@@ -92,6 +92,30 @@ Todas as ações de comanda devolvem a comanda completa atualizada.
 | POST | `/tickets/:tid/close` | `{summary}` (≤ 1000) — grava registro `chamado` na linha do tempo | `tickets:use` |
 | POST | `/tickets/:tid/read` | marca como lido até a última mensagem (204) | `tickets:use` |
 
+### Vendas (D19)
+
+| Método | Rota | Corpo / parâmetros | Permissão |
+|---|---|---|---|
+| GET | `/sales` | filtros: `from`, `to`, `userId`, `method`, `status`, `q` | `sales:read` |
+| GET | `/sales/awaiting` | comandas concluídas sem venda | `sales:close` |
+| GET | `/sales/closing/:workOrderId` | dados do painel de fechamento; 409 se não puder fechar | `sales:close` |
+| POST | `/sales/preview` | mesmo corpo do fechamento; devolve totais/comissões calculados (comissões só para admin) | `sales:close` |
+| POST | `/sales` | `{workOrderId, items[{itemId, unitPrice, userId}], discount, payments[{method, amount}], notes}` — 409 se já fechada | `sales:close` |
+| GET | `/sales/:id` | detalhe | `sales:read` |
+| POST | `/sales/:id/void` | `{reason}` — estorno | `sales:void` |
+
+### Financeiro (D19)
+
+| Método | Rota | Descrição | Permissão |
+|---|---|---|---|
+| GET | `/finance/me`, `/me/services`, `/me/payouts` | painel individual; sempre do usuário logado; filtros `from`, `to`, `bucket` | `finance:own` |
+| GET | `/finance/overview` | visão geral, ranking, evolução, serviços mais feitos | `finance:admin` |
+| GET | `/finance/team/:userId` (`/services`, `/payouts`) | relatório completo de um colaborador | `finance:admin` |
+| GET | `/finance/collaborators`, `/balances` | tabela da equipe; saldos pendentes | `finance:admin` |
+| GET/POST | `/finance/payouts` | histórico / registrar repasse `{userId, amount, method, note}` | `finance:admin` |
+| POST | `/finance/payouts/:id/cancel` | `{reason}` | `finance:admin` |
+| GET/PUT/DELETE | `/finance/rules`, `/rules/:id` | regras de comissão | `commissions:manage` |
+
 ### Funcionários
 
 | Método | Rota | Corpo | Permissão |

@@ -29,6 +29,14 @@ export function fmtPhone(p) {
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return d;
 }
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+export const fmtMoney = (v) => (v === null || v === undefined ? '—' : brl.format(Number(v)));
+export const fmtInt = (v) => Number(v || 0).toLocaleString('pt-BR');
+/** Rótulo de um ponto do gráfico: dia/semana -> dd/mm; mês -> mm/aaaa. */
+export function fmtBucket(d, group) {
+  const [y, m, day] = String(d).split('-');
+  return group === 'month' ? `${m}/${y}` : `${day}/${m}`;
+}
 export const fmtCpf = (c) => (c ? `${c.slice(0, 3)}.${c.slice(3, 6)}.${c.slice(6, 9)}-${c.slice(9)}` : '—');
 
 export const STATUS_LABELS = {
@@ -70,12 +78,12 @@ export function formData(form) {
  * Abre um modal com um formulário. onSubmit recebe os dados; se lançar erro, o modal permanece aberto.
  * Retorna uma Promise resolvida com o resultado de onSubmit (ou null se cancelado).
  */
-export function modal({ title, body, submitLabel = 'Salvar', danger = false, onSubmit, onOpen }) {
+export function modal({ title, body, submitLabel = 'Salvar', danger = false, wide = false, onSubmit, onOpen }) {
   return new Promise((resolve) => {
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
     wrap.innerHTML = html`
-      <form class="modal" novalidate>
+      <form class="modal ${wide ? 'modal-lg' : ''}" novalidate>
         <header><h2>${title}</h2><button type="button" class="icon-btn" data-close aria-label="Fechar">×</button></header>
         <div class="modal-body">${raw(body)}</div>
         <footer>

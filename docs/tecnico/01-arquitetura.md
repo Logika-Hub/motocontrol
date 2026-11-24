@@ -95,3 +95,7 @@ Exemplo: mecânico marca um serviço como realizado.
 | Cabeçalhos | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy` |
 | Auditoria | `audit_logs` com usuário, ação, entidade, detalhes e IP |
 | Transporte | HTTP na LAN. **HTTPS é obrigatório antes de qualquer exposição à internet** (fora do escopo) |
+
+## Módulo financeiro (D19)
+
+`server/lib/saleCalc.js` (cálculo puro em centavos) → `services/sales.js`, `commissions.js`, `finance.js` (transações, auditoria) → `routes/sales.js`, `routes/finance.js`. Front: `client/pages/{myDashboard,financeAdmin,financeCollaborator,payouts,commissionRules,sales}.js` e `client/scripts/{closing,charts,period,financeReport,financeTabs,saleDetail}.js`. Os gráficos são SVG gerados no cliente (sem biblioteca e sem estilos inline, por causa da CSP).
