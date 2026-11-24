@@ -28,9 +28,9 @@ O centro de tudo é a **comanda** (ordem de serviço). Cada entrada de moto gera
 
 ## Escopo da versão 1.0 (MVP)
 
-**Dentro:** autenticação e perfis; dashboard; clientes; motocicletas; comandas com status, serviços, peças e linha do tempo; consulta com filtros; histórico por moto; auditoria; backup e restauração; instalação automática; impressão da comanda.
+**Dentro:** autenticação e perfis; dashboard; clientes; motocicletas; comandas com status, serviços, peças e linha do tempo; consulta com filtros; histórico por moto; auditoria; backup e restauração; instalação automática; impressão da comanda; **financeiro (D19, adicionado depois do MVP):** fechamento de venda, comissões, repasses e dashboards de desempenho.
 
-**Fora (por decisão do briefing):** financeiro e valores, estoque, compras e fornecedores, orçamento com aprovação digital, nota fiscal, WhatsApp, múltiplas filiais e acesso pela internet.
+**Fora (por decisão do briefing):** estoque, compras e fornecedores, orçamento com aprovação digital, nota fiscal, WhatsApp, múltiplas filiais e acesso pela internet.
 
 > Diretriz do briefing: *"desenvolver primeiro um sistema funcional de gerenciamento de comandas e histórico de manutenção, evitando implementar módulos financeiros ou administrativos que não fazem parte da necessidade inicial."*
 

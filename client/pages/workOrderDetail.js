@@ -1,14 +1,16 @@
 import { api } from '../scripts/api.js';
 import {
   html, raw, field, modal, confirmDialog, toast, showError, statusBadge, STATUS_LABELS,
-  fmtDateTime, fmtDate, fmtTime, fmtKm, fmtPlate, fmtPhone,
+  fmtDateTime, fmtDate, fmtTime, fmtKm, fmtPlate, fmtPhone, fmtMoney,
 } from '../scripts/ui.js';
+import { openClosing } from '../scripts/closing.js';
+import { openSale } from '../scripts/saleDetail.js';
 
 const ACTIVE = ['aberta', 'em_diagnostico', 'aguardando_pecas', 'em_execucao'];
 const TYPE_LABELS = {
   abertura: 'Abertura', status: 'Status', diagnostico: 'Diagnóstico', servico: 'Serviço', peca: 'Peça',
   observacao: 'Observação', edicao: 'Edição', correcao: 'Correção', finalizacao: 'Finalização',
-  cancelamento: 'Cancelamento', remocao: 'Remoção', chamado: 'Chamado',
+  cancelamento: 'Cancelamento', remocao: 'Remoção', chamado: 'Chamado', venda: 'Venda',
 };
 const POLL_MS = 10000;
 const MANUAL = ['observacao', 'diagnostico', 'servico', 'correcao'];
@@ -67,11 +69,15 @@ export async function render(el, [id], ctx) {
             </label>`) : ''}
           ${open && ctx.can('work_orders:finish') ? raw('<button class="btn btn-success" data-finish>Concluir</button>') : ''}
           ${open && ctx.can('work_orders:cancel') ? raw('<button class="btn btn-ghost danger" data-cancel>Cancelar</button>') : ''}
+          ${wo.status === 'concluida' && !wo.sale && ctx.can('sales:close') ? raw('<button class="btn btn-primary" data-close-sale>Fechar venda</button>') : ''}
           <button class="btn btn-ghost" data-print>Imprimir</button>
         </div>
       </div>
 
       ${wo.status === 'cancelada' ? raw(html`<p class="alert alert-danger"><b>Justificativa do cancelamento:</b> ${wo.cancel_reason}</p>`) : ''}
+      ${wo.sale ? raw(html`<p class="alert alert-ok no-print"><b>Venda #${wo.sale.id} fechada</b> em ${fmtDateTime(wo.sale.closed_at)} por ${wo.sale.closed_by_name} — total ${fmtMoney(wo.sale.total)}.
+        ${ctx.can('sales:read') ? raw('<button type="button" class="link" data-open-sale>Ver detalhes</button>') : ''}</p>`) : ''}
+      ${wo.status === 'concluida' && !wo.sale && ctx.can('sales:close') ? raw('<p class="alert no-print">Comanda concluída e <b>ainda sem venda</b>. Confira os valores e feche a venda.</p>') : ''}
       ${wo.status === 'concluida' && wo.closing_notes ? raw(html`<p class="alert alert-ok"><b>Observações finais:</b> ${wo.closing_notes}</p>`) : ''}
 
       <div class="grid-2">
@@ -101,11 +107,12 @@ export async function render(el, [id], ctx) {
         <div class="card-head"><h2>Serviços e peças</h2>
           ${open && ctx.can('work_orders:items') ? raw('<button class="btn btn-primary btn-sm" data-add-item>+ Adicionar</button>') : ''}</div>
         ${wo.items.length ? raw(html`<table class="table">
-          <thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd.</th><th>Situação</th><th></th></tr></thead>
+          <thead><tr><th>Tipo</th><th>Descrição</th><th>Qtd.</th><th class="num">Preço unit.</th><th>Situação</th><th></th></tr></thead>
           <tbody>${wo.items.map((i) => raw(html`<tr>
             <td>${i.kind === 'peca' ? 'Peça' : 'Serviço'}</td>
             <td>${i.description}<br><small class="muted">por ${i.created_by_name}</small></td>
             <td>${i.quantity}</td>
+            <td class="num">${i.unit_price === null ? '—' : fmtMoney(i.unit_price)}</td>
             <td>${i.status === 'realizado'
     ? raw(html`<span class="badge status-concluida">${i.kind === 'peca' ? 'Aplicada' : 'Realizado'}</span><br><small class="muted">${i.performed_by_name} · ${fmtDateTime(i.performed_at)}</small>`)
     : raw(html`<span class="badge">${i.kind === 'peca' ? 'Solicitada' : 'Solicitado'}</span>`)}</td>
@@ -354,9 +361,18 @@ export async function render(el, [id], ctx) {
       body: html`<div class="row">
           ${raw(field('Tipo', '<select name="kind"><option value="servico">Serviço</option><option value="peca">Peça</option></select>'))}
           ${raw(field('Quantidade', '<input name="quantity" type="number" min="0.01" step="0.01" value="1">'))}
+          ${raw(field('Preço unitário (R$)', '<input name="unitPrice" inputmode="decimal" placeholder="0,00">', { hint: 'Opcional: pode ser informado ou corrigido no fechamento da venda.' }))}
         </div>${raw(field('Descrição', '<input name="description" required maxlength="255">', { required: true }))}`,
       submitLabel: 'Adicionar',
       onSubmit: (d) => act(() => api.post(`/work-orders/${id}/items`, d), 'Item adicionado.'),
+    }));
+
+    on('[data-close-sale]', 'click', guard(async () => {
+      await openClosing(id, ctx, async () => { wo = await api.get(`/work-orders/${id}`); draw(); });
+    }));
+
+    on('[data-open-sale]', 'click', guard(async () => {
+      await openSale(wo.sale.id, ctx, async () => { wo = await api.get(`/work-orders/${id}`); draw(); });
     }));
 
     on('[data-item-done]', 'click', guard(async (_e, b) => {

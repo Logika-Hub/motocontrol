@@ -93,7 +93,7 @@ router.delete('/:id/updates/:updateId', requirePermission('work_orders:remove_up
 
 router.post('/:id/items', requirePermission('work_orders:items'), wrap(async (req, res) => {
   const id = idParam(req.params.id);
-  await svc.addItem(req.user, id, { kind: str(req.body.kind), description: str(req.body.description), quantity: req.body.quantity }, req.ip);
+  await svc.addItem(req.user, id, { kind: str(req.body.kind), description: str(req.body.description), quantity: req.body.quantity, unitPrice: req.body.unitPrice }, req.ip);
   res.status(201).json(await svc.getDetail(id));
 }));
 

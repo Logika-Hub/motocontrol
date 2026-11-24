@@ -28,7 +28,7 @@ Pequenos, alinhados ao briefing e de alto valor:
 
 ## Expansões previstas no briefing (seção 12) — fora do MVP
 
-Controle de estoque e peças · fornecedores · valores e pagamentos · emissão de documentos · envio de atualizações ao cliente · relatórios de produtividade · indicadores financeiros · hospedagem em nuvem com acesso remoto.
+Controle de estoque e peças · fornecedores · emissão de documentos · envio de atualizações ao cliente · relatórios de produtividade · hospedagem em nuvem com acesso remoto.
 
 > Antes de começar qualquer uma, valide com a oficina o fluxo atual (comandas + histórico) em uso real — é a diretriz principal do briefing.
 
@@ -41,3 +41,7 @@ Controle de estoque e peças · fornecedores · valores e pagamentos · emissão
 | IP do servidor muda | Instrução para reservar IP no roteador; reexecutar o instalador regenera o atalho |
 | Único administrador perde a senha | Manual recomenda dois administradores; recuperação técnica via banco |
 | Sessões HTTP sem TLS na rede local | Rede interna; cookies `httpOnly` e `sameSite=strict`. HTTPS seria necessário antes de qualquer acesso pela internet |
+
+## Financeiro (D19) — situação
+
+Implementado: fechamento de venda, comissões, repasses, painel individual e geral, histórico de vendas. Verificado com os testes automatizados e no navegador em ambiente local com substitutos de pacote; **ainda não executado com `npm test` real nem no Windows**. Antes de usar com dinheiro real: rodar `npm test`, validar com a oficina as regras de comissão e o fluxo de estorno.

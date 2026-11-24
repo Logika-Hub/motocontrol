@@ -59,3 +59,19 @@ Rastreabilidade de cada regra: **onde está implementada** e **qual teste a gara
 ```
 
 Concluir e cancelar têm ações próprias (`/finish`, `/cancel`); `/status` só aceita os quatro estados ativos.
+
+## Regras financeiras (D19)
+
+Testes em `tests/finance.test.js` (integração) e `tests/saleCalc.test.js` (cálculo).
+
+| Código | Regra | Implementação | Teste |
+|---|---|---|---|
+| RN13 | Só comanda concluída e com preço em todos os itens vira venda | `services/sales.js#closingData`/`close` | *comanda cancelada não gera venda; item sem preço...* |
+| RN14 | Comanda não pode ser fechada duas vezes | `sales_one_active_per_order_uq` + `FOR UPDATE` | *uma comanda não pode ser fechada duas vezes* |
+| RN15 | Soma dos pagamentos = total da venda | `saleCalc#validatePayments` (no servidor, dentro da transação); `CHECK`s de totais em `sales`/`sale_items` | *fechamento...*; *integridade no banco* confere no banco que a soma dos pagamentos = total |
+| RN16 | Desconto rateado proporcionalmente; comissão sobre o líquido | `saleCalc#distributeDiscount`, `commissionFor` | *saleCalc.test.js*, *fechamento...* |
+| RN17 | Regra nova vale só para fechamentos futuros | retrato em `sale_items`; `commission_rules.ended_at` | *regra nova vale só para fechamentos futuros* |
+| RN18 | Repasse nunca excede o saldo pendente; parcial permitido | `services/commissions.js#createPayout` (trava o usuário) | *repasses: totais e parciais...* |
+| RN19 | Estorno e cancelamento de repasse exigem motivo, preservam o registro e são auditados | `voidSale`, `cancelPayout`, `audit()` | *estorno...*, *cancelar repasse...* |
+| RN20 | Colaborador só vê os próprios dados financeiros | `/finance/me/*` usa `req.user.id` | *painel individual...*, *permissões...* |
+| RN21 | Comissões só aparecem para administradores | `sales.js#preview`/`getSale` filtram sem `finance:admin` | *permissões...* |

@@ -37,3 +37,4 @@ A qualquer momento antes de concluir, a comanda pode ser **cancelada** (com just
 6. [Servidor, backup e atualização](06-servidor-e-backup.md)
 7. [Perguntas frequentes](07-perguntas-frequentes.md)
 8. [Chamados: tirar dúvidas sobre uma moto](08-chamados.md)
+9. [Financeiro: vendas, comissões e repasses](09-financeiro.md)
