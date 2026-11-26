@@ -96,9 +96,27 @@ Restaurar **substitui todos os dados atuais** pelos do backup. Use só em caso d
 | Sintoma | O que fazer |
 |---|---|
 | Ninguém consegue acessar | Verifique se o servidor está ligado. Rode `iniciar.bat` no servidor e veja a mensagem |
-| Só os outros computadores não acessam | Confira o endereço (IP) do servidor e se estão na mesma rede. O endereço está no arquivo `MotoControl (outros computadores).url`, na pasta do sistema (abra com o Bloco de Notas). Se o IP do servidor mudou, rode `instalar.bat` de novo para gerar o atalho atualizado |
+| Só os outros computadores não acessam | Rode o **diagnóstico de rede** (abaixo) no servidor: ele aponta a causa e o que fazer. O endereço está no arquivo `MotoControl (outros computadores).url`, na pasta do sistema (abra com o Bloco de Notas). Se o IP do servidor mudou, rode `instalar.bat` de novo para gerar o atalho atualizado |
 | `iniciar.bat` diz que o sistema não respondeu | Abra o arquivo `motocontrol.log`, na pasta do sistema, e envie as últimas linhas ao suporte |
 | "PostgreSQL não está aceitando conexões" | Abra **Serviços** do Windows (`services.msc`) e inicie o serviço **postgresql** |
+
+### Diagnóstico de rede
+
+Quando o sistema abre **no servidor** mas não nos outros computadores, rode no servidor:
+
+1. Abra a pasta do MotoControl (ex.: `C:\MotoControl`).
+2. Clique na barra de endereço do Explorador, digite `cmd` e tecle Enter.
+3. Digite o comando abaixo e tecle Enter:
+
+```bat
+node scripts\control.js rede
+```
+
+Ele confere o servidor, o firewall e o tipo da rede, marca com ✖ o que está errado e mostra o endereço certo para os outros computadores. Siga as instruções que aparecerem.
+
+> Alguns itens só podem ser verificados com permissão de administrador. Se aparecer "Não foi possível verificar o firewall", abra o `cmd` como administrador e rode de novo.
+
+Em Linux: `node scripts/control.js rede`.
 
 ---
 
