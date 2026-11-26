@@ -122,5 +122,22 @@ netsh advfirewall firewall add rule name="MotoControl" dir=in action=allow proto
 |---|---|---|
 | Log do servidor | `motocontrol.log` | `journalctl -u motocontrol -n 100` |
 | Está rodando? | `node scripts\control.js status` | `node scripts/control.js status` |
+| Acesso pela rede | `node scripts\control.js rede` | `node scripts/control.js rede` |
 | Tarefa / serviço | `schtasks /Query /TN MotoControl /V` | `systemctl status motocontrol` |
 | PostgreSQL | `services.msc` → postgresql | `systemctl status postgresql` |
+
+### `control.js rede`
+
+Diagnostica o acesso pelos outros computadores. Verifica, em ordem, e para no primeiro item que impede o resto:
+
+| # | Verificação | Como |
+|---|---|---|
+| 1 | Servidor no ar | `GET /api/health` em `127.0.0.1` (sai com código 1 se não responder) |
+| 2 | `HOST` | Lê o `.env`; qualquer valor diferente de `0.0.0.0` é apontado como erro |
+| 3 | Bind real | `GET /api/health` no primeiro IPv4 não-interno. No Windows essa conexão não passa pelo filtro de entrada, então o resultado isola o bind do firewall |
+| 4 | Firewall | Windows: código de saída de `netsh advfirewall firewall show rule name=MotoControl` (independe do idioma). Linux: `ufw status`; se o `ufw` estiver ausente ou inativo, nada é concluído |
+| 5 | Perfil da rede | Windows: `Get-NetConnectionProfile`; `Public` bloqueia a entrada mesmo com a regra criada |
+
+Saída: ✔/✖ por item, os endereços da rede e o código de saída 0 (tudo certo) ou 1 (problema encontrado), o que permite usá-lo em script. Itens que exigem administrador aparecem como "não foi possível verificar", nunca como erro.
+
+O que ele **não** alcança, por rodar só no servidor: isolamento de clientes no Wi-Fi, VLANs distintas e firewall de antivírus de terceiros. Esses casos entram na mensagem final quando nenhum problema local é encontrado.

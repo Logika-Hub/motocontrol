@@ -36,6 +36,9 @@ A moto já está cadastrada — pesquise pela placa em **Motocicletas**. Se ela 
 ### O sistema está fora do ar.
 Veja [Problemas no servidor](06-servidor-e-backup.md#problemas-no-servidor).
 
+### Abre no servidor, mas não nos outros computadores.
+Rode o diagnóstico de rede no servidor — veja [Diagnóstico de rede](06-servidor-e-backup.md#diagnóstico-de-rede). Ele diz o que está errado e como resolver.
+
 ### Dá para usar no celular?
 Sim, pelo navegador do celular, desde que ele esteja conectado ao **Wi-Fi da oficina**. O sistema não funciona fora da oficina (pela internet) — isso é intencional nesta versão.
 
